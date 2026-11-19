@@ -279,17 +279,17 @@ export default function HomepagePrayerBoard({
         </div>
       )}
 
-      {/* ── TOP ISLAMIC HEADER & CASCADING FILTER BAR ────────────────────── */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0c3327] via-[#09271e] to-[#041510] text-white p-5 sm:p-7 shadow-xl border border-emerald-800/40">
+      {/* ── TOP ISLAMIC HEADER & CASCADING FILTER BAR (2 CLEAN LINES) ──── */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0c3327] via-[#09271e] to-[#041510] text-white p-4 sm:p-5 shadow-xl border border-emerald-800/40">
         {/* Subtle Islamic Arch & Crescent decorative motif */}
         <div className="absolute right-4 top-2 pointer-events-none opacity-15">
-          <svg className="w-40 h-40 text-emerald-400" viewBox="0 0 100 100" fill="currentColor">
+          <svg className="w-32 h-32 text-emerald-400" viewBox="0 0 100 100" fill="currentColor">
             <path d="M50 10 A40 40 0 1 0 90 50 A30 30 0 1 1 50 10 Z" />
           </svg>
         </div>
 
-        {/* Top Filter Controls: District -> Town -> Mosque */}
-        <div className="relative z-10 flex flex-wrap items-center justify-between gap-3">
+        <div className="relative z-10 flex flex-col gap-2.5">
+          {/* Line 1: District & Town Dropdowns */}
           <div className="flex flex-wrap items-center gap-2.5">
             {/* District Filter Dropdown */}
             <div className="relative inline-flex items-center">
@@ -306,7 +306,7 @@ export default function HomepagePrayerBoard({
                   <option value="all">All Districts</option>
                   {districts.map((d) => (
                     <option key={d} value={d} className="bg-emerald-950 text-white">
-                      District: {d}
+                      {d}
                     </option>
                   ))}
                 </select>
@@ -323,13 +323,11 @@ export default function HomepagePrayerBoard({
                     id="town-select"
                     value={selectedTown}
                     onChange={(e) => handleTownChange(e.target.value)}
-                    className="appearance-none pl-3 pr-7 py-1.5 rounded-full border border-emerald-700/60 bg-emerald-950/80 hover:bg-emerald-900/90 text-xs font-semibold text-emerald-100 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400 transition-colors shadow-inner"
+                    className="appearance-none pl-3.5 pr-7 py-1.5 rounded-full border border-emerald-700/60 bg-emerald-950/80 hover:bg-emerald-900/90 text-xs font-semibold text-emerald-100 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400 transition-colors shadow-inner"
                     title="Filter by Town"
                   >
                     <option value="all" className="bg-emerald-950 text-white">
-                      {selectedDistrict && selectedDistrict !== "all"
-                        ? `All Towns (${selectedDistrict})`
-                        : "All Towns"}
+                      All Towns
                     </option>
                     {towns.map((t) => (
                       <option key={t} value={t} className="bg-emerald-950 text-white">
@@ -341,16 +339,19 @@ export default function HomepagePrayerBoard({
                 </div>
               </div>
             )}
+          </div>
 
+          {/* Line 2: Mosque Selector & Set as Default Button Side-by-Side */}
+          <div className="flex flex-wrap items-center gap-2.5">
             {/* Mosque Selector Dropdown */}
-            <div className="relative inline-flex items-center">
+            <div className="relative inline-flex items-center flex-1 max-w-md min-w-[220px]">
               <label htmlFor="mosque-select" className="sr-only">Select Mosque</label>
-              <div className="relative">
+              <div className="relative w-full">
                 <select
                   id="mosque-select"
                   value={selectedMosqueId}
                   onChange={(e) => handleMosqueChange(e.target.value)}
-                  className="appearance-none pl-3 pr-7 py-1.5 rounded-full border border-amber-400/50 bg-emerald-900/90 hover:bg-emerald-800 text-xs font-bold text-amber-200 cursor-pointer focus:outline-none focus:ring-1 focus:ring-amber-300 transition-colors shadow-inner"
+                  className="w-full appearance-none pl-3.5 pr-8 py-1.5 rounded-full border border-amber-400/50 bg-emerald-900/90 hover:bg-emerald-800 text-xs font-bold text-amber-200 cursor-pointer focus:outline-none focus:ring-1 focus:ring-amber-300 transition-colors shadow-inner truncate"
                   title="Switch Mosque"
                 >
                   {filteredMosques.map((m) => (
@@ -359,26 +360,24 @@ export default function HomepagePrayerBoard({
                     </option>
                   ))}
                 </select>
-                <ChevronDown className="w-3.5 h-3.5 absolute right-2.5 top-2.5 pointer-events-none text-amber-300" />
+                <ChevronDown className="w-3.5 h-3.5 absolute right-3 top-2.5 pointer-events-none text-amber-300" />
               </div>
             </div>
-          </div>
 
-          {/* Quick Default Mosque Badge / Action */}
-          <div className="flex items-center gap-2">
+            {/* Set as My Default Button / Active Badge */}
             {isUserDefault ? (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/20 text-amber-300 text-xs font-bold border border-amber-400/40">
-                <Star className="w-3 h-3 fill-amber-300 text-amber-300" />
+              <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-amber-400/20 text-amber-300 text-xs font-bold border border-amber-400/40 shrink-0">
+                <Star className="w-3.5 h-3.5 fill-amber-300 text-amber-300" />
                 <span>My Default Mosque</span>
               </span>
             ) : (
               <button
                 type="button"
                 onClick={handleSetAsDefault}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-all border border-white/25 cursor-pointer shadow-xs"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-all border border-white/25 cursor-pointer shadow-xs shrink-0"
                 title="Save this mosque as your default"
               >
-                <Star className="w-3 h-3 text-amber-300" />
+                <Star className="w-3.5 h-3.5 text-amber-300" />
                 <span>Set as My Default</span>
               </button>
             )}
@@ -388,32 +387,19 @@ export default function HomepagePrayerBoard({
 
       {/* ── MAIN PRAYER TIMINGS CARD (NEW UI) ─────────────────────────────── */}
       <div className="bg-card border-2 border-primary/20 rounded-3xl p-5 sm:p-7 md:p-8 shadow-xl relative overflow-hidden">
-        {/* Top Header: Mosque Visual, Name, Location & Date */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-border">
-          <div className="flex items-start sm:items-center gap-4">
-            {/* Mosque Graphic Badge */}
-            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-emerald-800 to-emerald-950 text-emerald-200 flex flex-col items-center justify-center shrink-0 border-2 border-emerald-600/40 shadow-md">
-              <svg className="w-8 h-8 text-amber-300" viewBox="0 0 24 24" fill="currentColor">
+        {/* Top Header: Exactly 2 Clean, Uncrowded Lines */}
+        <div className="flex flex-col gap-2 pb-5 border-b border-border">
+          {/* Line 1: Mosque Icon, Name & Badge */}
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-emerald-800 to-emerald-950 text-emerald-200 flex items-center justify-center shrink-0 border border-emerald-600/40 shadow-xs">
+              <svg className="w-6 h-6 text-amber-300" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 2C10.5 4 8 6 8 8C8 10.2 9.8 12 12 12C14.2 12 16 10.2 16 8C16 6 13.5 4 12 2Z" />
                 <path d="M4 14C4 12.9 4.9 12 6 12H18C19.1 12 20 12.9 20 14V21C20 21.6 19.6 22 19 22H5C4.4 22 4 21.6 4 21V14Z" opacity="0.8" />
               </svg>
-              <span className="text-[10px] font-bold text-amber-200 tracking-tight mt-0.5">MASJID</span>
             </div>
 
-            <div>
-              <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-bold">
-                  <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                  <span>{activeMosque.name}</span>
-                </span>
-                {isUserDefault && (
-                  <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-                    • Your Default
-                  </span>
-                )}
-              </div>
-
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-foreground tracking-tight leading-tight">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-foreground tracking-tight">
                 <Link
                   href={`/mosques/${activeMosque.slug}`}
                   className="hover:text-primary transition-colors"
@@ -422,33 +408,29 @@ export default function HomepagePrayerBoard({
                 </Link>
               </h2>
 
-              <div className="flex flex-wrap items-center gap-y-1 gap-x-3 mt-1.5 text-xs sm:text-sm text-muted-foreground">
-                <span className="flex items-center gap-1.5 font-medium text-foreground/80">
-                  <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
-                  {activeMosque.address}, {activeMosque.city}
-                </span>
-                <span className="hidden sm:inline text-border">•</span>
-                <span className="flex items-center gap-1 font-medium">
-                  <Calendar className="w-3.5 h-3.5 text-accent shrink-0" />
-                  {currentDate.formatted}
-                  {hijriDate && (
-                    <span className="text-primary font-semibold">
-                      ({hijriDate})
-                    </span>
-                  )}
-                </span>
-              </div>
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0">
+                <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                <span>{activeMosque.town || activeMosque.city}</span>
+              </span>
             </div>
           </div>
 
-          {/* Current Live Time Badge */}
-          <div className="flex flex-col items-start sm:items-end gap-1.5">
-            <LiveClock
-              variant="display"
-              timezone={activeMosque.timezone}
-              format="12h"
-              showSeconds={true}
-            />
+          {/* Line 2: Location & Dates in ONE single clean horizontal line */}
+          <div className="flex flex-wrap items-center gap-y-1 gap-x-3 text-xs sm:text-sm text-muted-foreground pt-0.5">
+            <span className="flex items-center gap-1.5 font-medium text-foreground/85 shrink-0">
+              <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
+              <span>{activeMosque.address}, {activeMosque.city}</span>
+            </span>
+            <span className="text-border">•</span>
+            <span className="flex items-center gap-1 font-medium shrink-0">
+              <Calendar className="w-3.5 h-3.5 text-accent shrink-0" />
+              <span>{currentDate.formatted}</span>
+              {hijriDate && (
+                <span className="text-primary font-semibold ml-1">
+                  ({hijriDate})
+                </span>
+              )}
+            </span>
           </div>
         </div>
 
