@@ -1,5 +1,11 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
+
+export const viewport: Viewport = {
+  themeColor: "#0a382c",
+  width: "device-width",
+  initialScale: 1,
+};
 
 export const metadata: Metadata = {
   title: {
@@ -8,6 +14,12 @@ export const metadata: Metadata = {
   },
   description:
     "Find accurate prayer times for mosques near you. View daily prayer schedules, Jummah timings, and announcements from multiple mosques.",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Salah Times",
+  },
   keywords: [
     "prayer times",
     "salah times",

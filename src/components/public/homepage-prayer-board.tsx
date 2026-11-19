@@ -22,6 +22,10 @@ import {
   Megaphone,
   Compass,
   Sparkles,
+  Download,
+  Smartphone,
+  X,
+  Printer,
 } from "lucide-react";
 import type { Mosque } from "@/types/mosque";
 import {
@@ -222,6 +226,46 @@ export default function HomepagePrayerBoard({
     return () => clearInterval(interval);
   }, [prayers, activeMosque.timezone]);
 
+  // PWA Install state & modal
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showInstallModal, setShowInstallModal] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(false);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+
+    if (window.matchMedia("(display-mode: standalone)").matches) {
+      setIsInstalled(true);
+    }
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      try {
+        await deferredPrompt.prompt();
+        const choice = await deferredPrompt.userChoice;
+        if (choice?.outcome === "accepted") {
+          setIsInstalled(true);
+        }
+        setDeferredPrompt(null);
+      } catch {
+        setShowInstallModal(true);
+      }
+    } else {
+      setShowInstallModal(true);
+    }
+  };
+
   // WhatsApp Share
   const handleShareWhatsApp = () => {
     const lines = [
@@ -281,33 +325,6 @@ export default function HomepagePrayerBoard({
 
       {/* ── TOP ISLAMIC HEADER & CASCADING FILTER BAR (2 CLEAN LINES) ──── */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0c3327] via-[#09271e] to-[#041510] text-white p-4 sm:p-5 shadow-xl border border-emerald-800/40">
-        {/* Luminous Full Moon decorative motif */}
-        <div className="absolute right-5 top-2.5 pointer-events-none opacity-25">
-          <svg className="w-28 h-28" viewBox="0 0 100 100" fill="none">
-            <defs>
-              <radialGradient id="fullMoonGlow" cx="50%" cy="50%" r="50%" fx="42%" fy="42%">
-                <stop offset="0%" stopColor="#fff8db" stopOpacity="0.5" />
-                <stop offset="60%" stopColor="#fef08a" stopOpacity="0.25" />
-                <stop offset="100%" stopColor="#fef08a" stopOpacity="0" />
-              </radialGradient>
-              <radialGradient id="moonBody" cx="45%" cy="45%" r="48%">
-                <stop offset="0%" stopColor="#ffffff" stopOpacity="0.85" />
-                <stop offset="70%" stopColor="#fde047" stopOpacity="0.45" />
-                <stop offset="100%" stopColor="#ca8a04" stopOpacity="0.2" />
-              </radialGradient>
-            </defs>
-            {/* Outer Glow Aura */}
-            <circle cx="50" cy="50" r="48" fill="url(#fullMoonGlow)" />
-            {/* Full Moon Disc */}
-            <circle cx="50" cy="50" r="34" fill="url(#moonBody)" stroke="#fef08a" strokeWidth="1" strokeOpacity="0.4" />
-            {/* Subtle lunar maria / crater details */}
-            <circle cx="42" cy="38" r="5" fill="#a16207" fillOpacity="0.12" />
-            <circle cx="58" cy="46" r="6.5" fill="#a16207" fillOpacity="0.1" />
-            <circle cx="47" cy="58" r="4.5" fill="#a16207" fillOpacity="0.1" />
-            <circle cx="37" cy="52" r="3.5" fill="#a16207" fillOpacity="0.08" />
-          </svg>
-        </div>
-
         <div className="relative z-10 flex flex-col gap-2.5">
           {/* Line 1: District & Town Dropdowns */}
           <div className="flex flex-wrap items-center gap-2.5">
@@ -681,6 +698,109 @@ export default function HomepagePrayerBoard({
           </div>
         </div>
       </div>
+
+      {/* ── BOTTOM CENTER DOWNLOAD APP BUTTON ──────────────────────────── */}
+      <div className="flex justify-center items-center pt-2">
+        <button
+          type="button"
+          onClick={handleInstallClick}
+          className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-amber-500 hover:bg-amber-600 text-stone-950 text-xs sm:text-sm font-extrabold shadow-md hover:shadow-lg transition-all cursor-pointer hover:scale-102 active:scale-98"
+          title="Download & Install Salah Times Web App"
+        >
+          <Download className="w-4 h-4 text-stone-950" />
+          <span>{isInstalled ? "App Installed" : "Download App"}</span>
+        </button>
+      </div>
+
+      {/* ── DOWNLOAD / INSTALL WEB APP MODAL ─────────────────────────── */}
+      {showInstallModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="relative w-full max-w-md rounded-3xl bg-card border border-border p-6 shadow-2xl text-foreground space-y-5">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
+                  <Smartphone className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-lg text-foreground">
+                    Install Salah Times App
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Fast offline-ready access on your phone or PC
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowInstallModal(false)}
+                className="p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Quick 1-tap install if available */}
+            {deferredPrompt && (
+              <button
+                type="button"
+                onClick={handleInstallClick}
+                className="w-full py-3 px-4 rounded-xl bg-primary text-primary-foreground font-bold text-sm shadow-md hover:bg-primary/90 flex items-center justify-center gap-2 cursor-pointer transition-all"
+              >
+                <Download className="w-4 h-4" />
+                <span>Install Salah Times Now</span>
+              </button>
+            )}
+
+            {/* Platform Instructions */}
+            <div className="space-y-3 text-xs bg-muted/40 p-4 rounded-2xl border border-border/80">
+              <div className="font-bold text-foreground">How to add to your Home Screen:</div>
+              <div className="space-y-2 text-muted-foreground">
+                <div className="flex items-start gap-2">
+                  <strong className="text-foreground shrink-0">• iPhone (Safari):</strong>
+                  <span>
+                    Tap the <strong>Share</strong> button (box with arrow) at the bottom, then scroll down and tap <strong>&quot;Add to Home Screen&quot;</strong>.
+                  </span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <strong className="text-foreground shrink-0">• Android (Chrome):</strong>
+                  <span>
+                    Tap the <strong>⋮ (three dots)</strong> menu at the top-right, then tap <strong>&quot;Install app&quot;</strong> or <strong>&quot;Add to Home screen&quot;</strong>.
+                  </span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <strong className="text-foreground shrink-0">• Desktop (Chrome/Edge):</strong>
+                  <span>
+                    Click the <strong>Install icon (⊕)</strong> on the right side of the browser address bar.
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Print / Save Timetable PDF */}
+            <div className="pt-1 flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowInstallModal(false);
+                  window.print();
+                }}
+                className="flex-1 py-2.5 px-3 rounded-xl border border-border hover:bg-muted text-xs font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer"
+              >
+                <Printer className="w-3.5 h-3.5 text-muted-foreground" />
+                <span>Print / Save Timetable PDF</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowInstallModal(false)}
+                className="py-2.5 px-4 rounded-xl bg-muted hover:bg-muted/80 text-xs font-semibold transition-colors cursor-pointer"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
