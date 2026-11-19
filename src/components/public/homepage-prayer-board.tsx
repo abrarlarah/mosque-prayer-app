@@ -281,10 +281,30 @@ export default function HomepagePrayerBoard({
 
       {/* ── TOP ISLAMIC HEADER & CASCADING FILTER BAR (2 CLEAN LINES) ──── */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0c3327] via-[#09271e] to-[#041510] text-white p-4 sm:p-5 shadow-xl border border-emerald-800/40">
-        {/* Subtle Islamic Arch & Crescent decorative motif */}
-        <div className="absolute right-4 top-2 pointer-events-none opacity-15">
-          <svg className="w-32 h-32 text-emerald-400" viewBox="0 0 100 100" fill="currentColor">
-            <path d="M50 10 A40 40 0 1 0 90 50 A30 30 0 1 1 50 10 Z" />
+        {/* Luminous Full Moon decorative motif */}
+        <div className="absolute right-5 top-2.5 pointer-events-none opacity-25">
+          <svg className="w-28 h-28" viewBox="0 0 100 100" fill="none">
+            <defs>
+              <radialGradient id="fullMoonGlow" cx="50%" cy="50%" r="50%" fx="42%" fy="42%">
+                <stop offset="0%" stopColor="#fff8db" stopOpacity="0.5" />
+                <stop offset="60%" stopColor="#fef08a" stopOpacity="0.25" />
+                <stop offset="100%" stopColor="#fef08a" stopOpacity="0" />
+              </radialGradient>
+              <radialGradient id="moonBody" cx="45%" cy="45%" r="48%">
+                <stop offset="0%" stopColor="#ffffff" stopOpacity="0.85" />
+                <stop offset="70%" stopColor="#fde047" stopOpacity="0.45" />
+                <stop offset="100%" stopColor="#ca8a04" stopOpacity="0.2" />
+              </radialGradient>
+            </defs>
+            {/* Outer Glow Aura */}
+            <circle cx="50" cy="50" r="48" fill="url(#fullMoonGlow)" />
+            {/* Full Moon Disc */}
+            <circle cx="50" cy="50" r="34" fill="url(#moonBody)" stroke="#fef08a" strokeWidth="1" strokeOpacity="0.4" />
+            {/* Subtle lunar maria / crater details */}
+            <circle cx="42" cy="38" r="5" fill="#a16207" fillOpacity="0.12" />
+            <circle cx="58" cy="46" r="6.5" fill="#a16207" fillOpacity="0.1" />
+            <circle cx="47" cy="58" r="4.5" fill="#a16207" fillOpacity="0.1" />
+            <circle cx="37" cy="52" r="3.5" fill="#a16207" fillOpacity="0.08" />
           </svg>
         </div>
 
