@@ -76,21 +76,23 @@ export default async function MosqueDetailPage({ params }: MosquePageProps) {
             <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
               {mosque.name}
             </h1>
-            <div className="flex flex-wrap items-center gap-y-2 gap-x-4 mt-3 text-sm text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-y-2 gap-x-3 mt-3 text-sm text-muted-foreground">
               <span className="flex items-center gap-1.5 font-medium text-foreground/80">
                 <MapPin className="w-4 h-4 text-primary shrink-0" />
                 {mosque.address}, {mosque.city}, {mosque.state}
               </span>
               <span className="hidden sm:inline text-border">•</span>
-              <span className="flex items-center gap-1.5">
-                <Calendar className="w-4 h-4 text-accent shrink-0" />
-                {currentDate.formatted}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="flex items-center gap-1.5">
+                  <Calendar className="w-4 h-4 text-accent shrink-0" />
+                  {currentDate.formatted}
+                </span>
                 {hijriDate && (
-                  <span className="text-primary font-medium">
-                    ({hijriDate})
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold text-xs">
+                    {hijriDate}
                   </span>
                 )}
-              </span>
+              </div>
             </div>
           </div>
 

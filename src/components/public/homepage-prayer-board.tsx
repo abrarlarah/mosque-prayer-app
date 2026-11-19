@@ -468,22 +468,24 @@ export default function HomepagePrayerBoard({
             </div>
           </div>
 
-          {/* Line 2: Location & Dates in ONE single clean horizontal line */}
-          <div className="flex flex-wrap items-center gap-y-1 gap-x-3 text-xs sm:text-sm text-muted-foreground pt-0.5">
-            <span className="flex items-center gap-1.5 font-medium text-foreground/85 shrink-0">
+          {/* Line 2: Location & Dates (wraps smoothly on mobile without clipping) */}
+          <div className="flex flex-wrap items-center gap-y-1.5 gap-x-2.5 text-xs sm:text-sm text-muted-foreground pt-0.5">
+            <div className="flex items-center gap-1.5 font-medium text-foreground/85">
               <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
               <span>{activeMosque.address}, {activeMosque.city}</span>
-            </span>
-            <span className="text-border">•</span>
-            <span className="flex items-center gap-1 font-medium shrink-0">
-              <Calendar className="w-3.5 h-3.5 text-accent shrink-0" />
-              <span>{currentDate.formatted}</span>
+            </div>
+            <span className="hidden sm:inline text-border">•</span>
+            <div className="flex flex-wrap items-center gap-1.5 font-medium">
+              <span className="flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5 text-accent shrink-0" />
+                <span>{currentDate.formatted}</span>
+              </span>
               {hijriDate && (
-                <span className="text-primary font-semibold ml-1">
-                  ({hijriDate})
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold text-xs">
+                  {hijriDate}
                 </span>
               )}
-            </span>
+            </div>
           </div>
         </div>
 
