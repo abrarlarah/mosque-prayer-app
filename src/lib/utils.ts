@@ -126,16 +126,48 @@ export function getCurrentDate(timezone: string = "UTC"): {
   };
 }
 
-export function getHijriDate(timezone: string = "UTC"): string {
+const ISLAMIC_MONTH_NAMES: Record<number, string> = {
+  1: "Muharram",
+  2: "Safar",
+  3: "Rabi al-Awwal",
+  4: "Rabi al-Thani",
+  5: "Jumada al-Ula",
+  6: "Jumada al-Thani",
+  7: "Rajab",
+  8: "Sha'ban",
+  9: "Ramadan",
+  10: "Shawwal",
+  11: "Dhul Qadah",
+  12: "Dhul Hijjah",
+};
+
+export function getHijriDate(timezone: string = "Asia/Kolkata", offsetDays: number = -1): string {
   try {
     const now = new Date();
-    const formatter = new Intl.DateTimeFormat("en-US-u-ca-islamic-umalqura", {
-      timeZone: timezone,
+    // In Kashmir / South Asia, local moon sighting is typically 1 day behind Saudi Umm al-Qura
+    const isSouthAsia = !timezone || timezone === "Asia/Kolkata" || timezone === "Asia/Calcutta";
+    const effectiveOffset = isSouthAsia ? offsetDays : 0;
+    const adjustedDate = new Date(now.getTime() + effectiveOffset * 86400000);
+
+    const parts = new Intl.DateTimeFormat("en-US-u-ca-islamic-umalqura", {
+      timeZone: timezone || "Asia/Kolkata",
       day: "numeric",
-      month: "long",
+      month: "numeric",
       year: "numeric",
-    });
-    return formatter.format(now);
+    }).formatToParts(adjustedDate);
+
+    let day = "";
+    let monthNum = 0;
+    let year = "";
+
+    for (const p of parts) {
+      if (p.type === "day") day = p.value;
+      if (p.type === "month") monthNum = parseInt(p.value, 10);
+      if (p.type === "year") year = p.value;
+    }
+
+    const monthName = ISLAMIC_MONTH_NAMES[monthNum] || "Jumada al-Thani";
+    return `${day} ${monthName} ${year} AH`;
   } catch {
     return "";
   }
