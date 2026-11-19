@@ -23,9 +23,6 @@ import {
   Compass,
   Sparkles,
   Download,
-  Smartphone,
-  X,
-  Printer,
 } from "lucide-react";
 import type { Mosque } from "@/types/mosque";
 import {
@@ -226,13 +223,17 @@ export default function HomepagePrayerBoard({
     return () => clearInterval(interval);
   }, [prayers, activeMosque.timezone]);
 
-  // PWA Install state & modal
+  // PWA Install state
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [showInstallModal, setShowInstallModal] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
+    // Register Service Worker for PWA installability
+    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
+    }
+
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e);
@@ -258,11 +259,26 @@ export default function HomepagePrayerBoard({
           setIsInstalled(true);
         }
         setDeferredPrompt(null);
-      } catch {
-        setShowInstallModal(true);
+      } catch (err) {
+        console.error(err);
       }
+      return;
+    }
+
+    if (isInstalled) {
+      setSavedFeedback("Salah Times is already installed on this device!");
+      setTimeout(() => setSavedFeedback(null), 3500);
+      return;
+    }
+
+    // Direct platform prompt or notification
+    const isIOS = typeof navigator !== "undefined" && /iPad|iPhone|iPod/.test(navigator.userAgent);
+    if (isIOS) {
+      setSavedFeedback("To install on iPhone: Tap Share (⎋) at the bottom, then 'Add to Home Screen'");
+      setTimeout(() => setSavedFeedback(null), 5000);
     } else {
-      setShowInstallModal(true);
+      setSavedFeedback("Click the Install icon (⊕) in your browser address bar to install");
+      setTimeout(() => setSavedFeedback(null), 4000);
     }
   };
 
@@ -711,96 +727,6 @@ export default function HomepagePrayerBoard({
           <span>{isInstalled ? "App Installed" : "Download App"}</span>
         </button>
       </div>
-
-      {/* ── DOWNLOAD / INSTALL WEB APP MODAL ─────────────────────────── */}
-      {showInstallModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="relative w-full max-w-md rounded-3xl bg-card border border-border p-6 shadow-2xl text-foreground space-y-5">
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
-                  <Smartphone className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-extrabold text-lg text-foreground">
-                    Install Salah Times App
-                  </h3>
-                  <p className="text-xs text-muted-foreground">
-                    Fast offline-ready access on your phone or PC
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowInstallModal(false)}
-                className="p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-                aria-label="Close"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Quick 1-tap install if available */}
-            {deferredPrompt && (
-              <button
-                type="button"
-                onClick={handleInstallClick}
-                className="w-full py-3 px-4 rounded-xl bg-primary text-primary-foreground font-bold text-sm shadow-md hover:bg-primary/90 flex items-center justify-center gap-2 cursor-pointer transition-all"
-              >
-                <Download className="w-4 h-4" />
-                <span>Install Salah Times Now</span>
-              </button>
-            )}
-
-            {/* Platform Instructions */}
-            <div className="space-y-3 text-xs bg-muted/40 p-4 rounded-2xl border border-border/80">
-              <div className="font-bold text-foreground">How to add to your Home Screen:</div>
-              <div className="space-y-2 text-muted-foreground">
-                <div className="flex items-start gap-2">
-                  <strong className="text-foreground shrink-0">• iPhone (Safari):</strong>
-                  <span>
-                    Tap the <strong>Share</strong> button (box with arrow) at the bottom, then scroll down and tap <strong>&quot;Add to Home Screen&quot;</strong>.
-                  </span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <strong className="text-foreground shrink-0">• Android (Chrome):</strong>
-                  <span>
-                    Tap the <strong>⋮ (three dots)</strong> menu at the top-right, then tap <strong>&quot;Install app&quot;</strong> or <strong>&quot;Add to Home screen&quot;</strong>.
-                  </span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <strong className="text-foreground shrink-0">• Desktop (Chrome/Edge):</strong>
-                  <span>
-                    Click the <strong>Install icon (⊕)</strong> on the right side of the browser address bar.
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Print / Save Timetable PDF */}
-            <div className="pt-1 flex items-center justify-between gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowInstallModal(false);
-                  window.print();
-                }}
-                className="flex-1 py-2.5 px-3 rounded-xl border border-border hover:bg-muted text-xs font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer"
-              >
-                <Printer className="w-3.5 h-3.5 text-muted-foreground" />
-                <span>Print / Save Timetable PDF</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowInstallModal(false)}
-                className="py-2.5 px-4 rounded-xl bg-muted hover:bg-muted/80 text-xs font-semibold transition-colors cursor-pointer"
-              >
-                Done
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
