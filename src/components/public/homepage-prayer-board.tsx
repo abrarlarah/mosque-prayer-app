@@ -492,8 +492,8 @@ export default function HomepagePrayerBoard({
             </div>
           </div>
 
-          {/* 5 Prayer Cards Grid (Matching the new UI aesthetic) */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+          {/* 6 Prayer Cards Grid: 5 Daily Prayers + Jummah in 6th slot */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
             {prayers.map((prayer) => {
               const isTarget =
                 nextPrayer?.name.toLowerCase() === prayer.name.toLowerCase();
@@ -569,148 +569,116 @@ export default function HomepagePrayerBoard({
                 </div>
               );
             })}
-          </div>
 
-          {/* ── NEXT PRAYER COUNTDOWN BAR ───────────────────────────────── */}
-          {nextPrayer && (
-            <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/25 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-3.5 text-center sm:text-left">
-                <div className="w-11 h-11 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shadow-xs shrink-0">
-                  <Timer className="w-6 h-6 animate-pulse" />
+            {/* ── CARD 6: FRIDAY JUMMAH (FITS SYMMETRICALLY IN 6TH SLOT) ── */}
+            <div className="rounded-2xl p-4 sm:p-5 text-center transition-all flex flex-col justify-between border bg-muted/30 border-border/80 hover:border-emerald-500/50 hover:bg-muted/50">
+              <div>
+                <div className="flex items-center justify-center mb-2.5">
+                  <Building2 className="w-6 h-6 text-primary" />
                 </div>
-                <div>
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground block">
-                    Upcoming Congregational Prayer
+
+                <div className="flex items-center justify-center gap-1.5 mb-1.5">
+                  <span className="text-xs font-extrabold uppercase tracking-wider text-foreground">
+                    JUMMAH
                   </span>
-                  <div className="text-xl sm:text-2xl font-extrabold text-foreground">
-                    Next Prayer: {nextPrayer.name}{" "}
-                    <span className="text-sm sm:text-base font-semibold text-primary font-mono">
-                      at {formatTime(nextPrayer.time, "12h")}
-                    </span>
+                  <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-500/15 px-1.5 py-0.2 rounded">
+                    FRI
+                  </span>
+                </div>
+
+                <div className="my-1">
+                  {filterMode === "both" && (
+                    <div className="text-[11px] font-bold uppercase tracking-wider mb-0.5 text-primary font-semibold">
+                      Jamaat
+                    </div>
+                  )}
+                  <div className="text-2xl sm:text-3xl font-mono font-black tracking-tight text-foreground">
+                    {jummahSessions.length > 0
+                      ? formatTime(
+                          filterMode === "adhan"
+                            ? jummahSessions[0].khutbahTime
+                            : jummahSessions[0].jamaatTime,
+                          "12h"
+                        )
+                      : "1:15 PM"}
                   </div>
                 </div>
               </div>
 
-              {/* Countdown Clock */}
-              <div className="flex items-center gap-2 bg-card border border-primary/30 px-5 py-2.5 rounded-xl shadow-xs">
+              {filterMode === "both" && (
+                <div className="mt-3 pt-2 border-t border-border text-xs font-mono text-muted-foreground">
+                  Khutbah:{" "}
+                  <strong className="text-foreground font-semibold">
+                    {jummahSessions.length > 0
+                      ? formatTime(jummahSessions[0].khutbahTime, "12h")
+                      : "12:45 PM"}
+                  </strong>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ── NEXT PRAYER COUNTDOWN BAR + COMPACT ACTIONS ────────────── */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/25 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5 text-center sm:text-left">
+              <div className="w-11 h-11 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shadow-xs shrink-0">
+                <Timer className="w-6 h-6 animate-pulse" />
+              </div>
+              <div>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground block">
+                  Upcoming Congregational Prayer
+                </span>
+                <div className="text-xl sm:text-2xl font-extrabold text-foreground">
+                  {nextPrayer ? (
+                    <>
+                      Next Prayer: {nextPrayer.name}{" "}
+                      <span className="text-sm sm:text-base font-semibold text-primary font-mono">
+                        at {formatTime(nextPrayer.time, "12h")}
+                      </span>
+                    </>
+                  ) : (
+                    "Calculating upcoming prayer..."
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Countdown Clock + Compact Action Buttons */}
+            <div className="flex flex-wrap items-center gap-2.5">
+              <div className="flex items-center gap-2 bg-card border border-primary/30 px-4 py-2 rounded-xl shadow-xs">
                 <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground mr-1">
                   Starts In:
                 </span>
-                <div className="font-mono font-black text-2xl text-primary tabular-nums">
+                <div className="font-mono font-black text-xl sm:text-2xl text-primary tabular-nums">
                   {String(countdown.hours).padStart(2, "0")}:
                   {String(countdown.minutes).padStart(2, "0")}:
                   {String(countdown.seconds).padStart(2, "0")}
                 </div>
               </div>
-            </div>
-          )}
-        </div>
-      </div>
 
-      {/* ── BOTTOM ACTIONS & COMMUNITY SECTIONS (WHATSAPP, TV MODE & MORE) ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: WhatsApp Sharing */}
-        <div className="bg-card border border-border hover:border-emerald-500/50 p-5 rounded-2xl shadow-xs transition-all flex flex-col justify-between">
-          <div>
-            <div className="w-10 h-10 rounded-xl bg-emerald-600/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-3">
-              <Share2 className="w-5 h-5" />
-            </div>
-            <h3 className="font-extrabold text-sm text-foreground mb-1">
-              Share on WhatsApp
-            </h3>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Send today&apos;s verified Adhan &amp; Jamaat timetable to family and prayer groups.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={handleShareWhatsApp}
-            className="mt-4 w-full py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-xs"
-          >
-            <Share2 className="w-3.5 h-3.5" />
-            <span>Share Timetable</span>
-          </button>
-        </div>
+              {/* Compact WhatsApp Share */}
+              <button
+                type="button"
+                onClick={handleShareWhatsApp}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+                title="Share timetable on WhatsApp"
+              >
+                <Share2 className="w-3.5 h-3.5" />
+                <span>WhatsApp</span>
+              </button>
 
-        {/* Card 2: TV Display Mode */}
-        <div className="bg-card border border-border hover:border-primary/50 p-5 rounded-2xl shadow-xs transition-all flex flex-col justify-between">
-          <div>
-            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-3">
-              <Tv className="w-5 h-5" />
+              {/* Compact TV Mode */}
+              <Link
+                href={`/mosques/${activeMosque.slug}/display`}
+                target="_blank"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-bold transition-all shadow-xs"
+                title="Launch Fullscreen TV Signage Mode"
+              >
+                <Tv className="w-3.5 h-3.5" />
+                <span>TV Mode</span>
+              </Link>
             </div>
-            <h3 className="font-extrabold text-sm text-foreground mb-1">
-              TV Digital Signage
-            </h3>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Dedicated fullscreen digital display for Mosque LED and TV monitors.
-            </p>
           </div>
-          <Link
-            href={`/mosques/${activeMosque.slug}/display`}
-            target="_blank"
-            className="mt-4 w-full py-2 px-3 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-bold transition-colors flex items-center justify-center gap-2 shadow-xs text-center"
-          >
-            <Tv className="w-3.5 h-3.5" />
-            <span>Launch TV Mode</span>
-          </Link>
-        </div>
-
-        {/* Card 3: Personal Default Mosque Preference */}
-        <div className="bg-card border border-border hover:border-amber-500/50 p-5 rounded-2xl shadow-xs transition-all flex flex-col justify-between">
-          <div>
-            <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center mb-3">
-              <Star className="w-5 h-5 fill-amber-500" />
-            </div>
-            <h3 className="font-extrabold text-sm text-foreground mb-1">
-              My Default Mosque
-            </h3>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              {isUserDefault
-                ? `Currently set as your personal home screen default.`
-                : `Set "${activeMosque.name}" as your personal home default.`}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={handleSetAsDefault}
-            disabled={isUserDefault}
-            className={`mt-4 w-full py-2 px-3 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-xs ${
-              isUserDefault
-                ? "bg-muted text-muted-foreground cursor-default"
-                : "bg-amber-500 hover:bg-amber-600 text-white"
-            }`}
-          >
-            <Star className={`w-3.5 h-3.5 ${isUserDefault ? "fill-muted-foreground" : "fill-white"}`} />
-            <span>{isUserDefault ? "Default Active" : "Set as Default"}</span>
-          </button>
-        </div>
-
-        {/* Card 4: Friday Jummah Prayers */}
-        <div className="bg-card border border-border hover:border-blue-500/50 p-5 rounded-2xl shadow-xs transition-all flex flex-col justify-between">
-          <div>
-            <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-3">
-              <Building2 className="w-5 h-5" />
-            </div>
-            <h3 className="font-extrabold text-sm text-foreground mb-1">
-              Friday Jummah
-            </h3>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              {jummahSessions.length > 0 ? (
-                <span>
-                  Khutbah: <strong>{formatTime(jummahSessions[0].khutbahTime, "12h")}</strong> • Jamaat: <strong>{formatTime(jummahSessions[0].jamaatTime, "12h")}</strong>
-                </span>
-              ) : (
-                "Weekly Friday congregational schedule."
-              )}
-            </p>
-          </div>
-          <Link
-            href={`/mosques/${activeMosque.slug}`}
-            className="mt-4 w-full py-2 px-3 rounded-xl border border-border hover:bg-muted text-foreground text-xs font-bold transition-colors flex items-center justify-center gap-2 text-center"
-          >
-            <span>Mosque Details</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
         </div>
       </div>
     </div>
