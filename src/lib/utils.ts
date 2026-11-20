@@ -172,3 +172,20 @@ export function getHijriDate(timezone: string = "Asia/Kolkata", offsetDays: numb
     return "";
   }
 }
+
+/**
+ * Shifts a 24h time string ("HH:MM") by a given number of minutes (+/-).
+ */
+export function shiftTime(time: string | null | undefined, deltaMinutes: number): string {
+  if (!time) return "12:00";
+  const [hStr, mStr] = time.split(":");
+  let totalMinutes = (parseInt(hStr, 10) || 0) * 60 + (parseInt(mStr, 10) || 0) + deltaMinutes;
+
+  // Wrap around 24 hours (1440 minutes in a day)
+  totalMinutes = ((totalMinutes % 1440) + 1440) % 1440;
+
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+}

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import AdminHeader from "@/components/admin/admin-header";
 import { sampleMosques, samplePrayerTimes } from "@/lib/sample-data";
-import { formatTime } from "@/lib/utils";
+import { formatTime, shiftTime } from "@/lib/utils";
 import {
   ArrowLeft,
   Save,
@@ -15,6 +15,7 @@ import {
   CheckCircle2,
   Calendar,
   Layers,
+  Zap,
 } from "lucide-react";
 
 interface PageProps {
@@ -96,7 +97,9 @@ export default function MosquePrayerEditorPage({ params }: PageProps) {
     return null;
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     const error = validate();
     if (error && !error.startsWith("Warning")) {
@@ -104,20 +107,28 @@ export default function MosquePrayerEditorPage({ params }: PageProps) {
       return;
     }
 
-    const confirmed = window.confirm(
-      `Are you sure you want to publish these prayer timing updates for ${mosque.name}?`
-    );
+    setIsSaving(true);
+    samplePrayerTimes[mosque.id] = prayers;
+    try {
+      localStorage.setItem(`prayer_times_${mosque.id}`, JSON.stringify(prayers));
+    } catch {}
 
-    if (confirmed) {
-      samplePrayerTimes[mosque.id] = prayers;
-      try {
-        localStorage.setItem(`prayer_times_${mosque.id}`, JSON.stringify(prayers));
-      } catch {}
-      setValidationError(null);
-      setHasChanges(false);
-      setIsSaved(true);
-      setTimeout(() => setIsSaved(false), 4000);
+    // Save to Supabase cloud database
+    try {
+      await fetch("/api/prayer-times", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mosqueId: mosque.id, prayers }),
+      });
+    } catch (err) {
+      console.error(err);
     }
+
+    setIsSaving(false);
+    setValidationError(null);
+    setHasChanges(false);
+    setIsSaved(true);
+    setTimeout(() => setIsSaved(false), 4000);
   };
 
   return (
@@ -258,16 +269,42 @@ export default function MosquePrayerEditorPage({ params }: PageProps) {
                     </td>
 
                     <td className="py-4 px-4">
-                      <input
-                        type="time"
-                        required={prayer.isEnabled}
-                        value={prayer.jamaatTime || ""}
-                        disabled={!prayer.isEnabled}
-                        onChange={(e) =>
-                          handleTimeChange(idx, "jamaatTime", e.target.value)
-                        }
-                        className="px-3 py-2 rounded-xl border border-input bg-background font-mono text-sm font-semibold text-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
-                      />
+                      <div className="inline-flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newTime = shiftTime(prayer.jamaatTime, -5);
+                            handleTimeChange(idx, "jamaatTime", newTime);
+                          }}
+                          disabled={!prayer.isEnabled}
+                          className="w-7 h-7 rounded-lg bg-muted border border-border hover:bg-muted/80 text-xs font-bold flex items-center justify-center cursor-pointer active:scale-95 disabled:opacity-30 transition-all text-muted-foreground hover:text-foreground"
+                          title="Subtract 5 minutes"
+                        >
+                          -5
+                        </button>
+                        <input
+                          type="time"
+                          required={prayer.isEnabled}
+                          value={prayer.jamaatTime || ""}
+                          disabled={!prayer.isEnabled}
+                          onChange={(e) =>
+                            handleTimeChange(idx, "jamaatTime", e.target.value)
+                          }
+                          className="px-2.5 py-2 rounded-xl border border-input bg-background font-mono text-sm font-semibold text-primary focus:outline-none focus:ring-2 focus:ring-primary/30 w-28 text-center"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newTime = shiftTime(prayer.jamaatTime, 5);
+                            handleTimeChange(idx, "jamaatTime", newTime);
+                          }}
+                          disabled={!prayer.isEnabled}
+                          className="w-7 h-7 rounded-lg bg-primary/10 border border-primary/30 hover:bg-primary/20 text-xs font-bold flex items-center justify-center cursor-pointer active:scale-95 disabled:opacity-30 transition-all text-primary"
+                          title="Add 5 minutes"
+                        >
+                          +5
+                        </button>
+                      </div>
                     </td>
 
                     <td className="py-4 px-4">
@@ -314,11 +351,11 @@ export default function MosquePrayerEditorPage({ params }: PageProps) {
 
               <button
                 type="submit"
-                disabled={!hasChanges}
+                disabled={!hasChanges || isSaving}
                 className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs sm:text-sm font-semibold hover:bg-primary/95 transition-all shadow-md disabled:opacity-40 cursor-pointer"
               >
                 <Save className="w-4 h-4" />
-                <span>Publish Schedule</span>
+                <span>{isSaving ? "Publishing..." : "Publish Schedule"}</span>
               </button>
             </div>
           </div>

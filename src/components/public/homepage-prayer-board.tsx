@@ -23,6 +23,9 @@ import {
   Compass,
   Sparkles,
   Download,
+  Zap,
+  X,
+  Save,
 } from "lucide-react";
 import type { Mosque } from "@/types/mosque";
 import {
@@ -31,6 +34,7 @@ import {
   getHijriDate,
   getNextPrayer,
   getTimeUntil,
+  shiftTime,
 } from "@/lib/utils";
 import LiveClock from "@/components/public/live-clock";
 import { getPrayerTimes, getJummahSessions } from "@/lib/sample-data";
@@ -180,9 +184,65 @@ export default function HomepagePrayerBoard({
 
   const isUserDefault = isMounted && selectedMosqueId === userDefaultMosqueId;
 
-  const prayers = useMemo(() => {
-    return getPrayerTimes(activeMosque.id);
+  // Prayer times state with local storage & API database synchronization
+  const [prayers, setPrayers] = useState(() => getPrayerTimes(defaultMosque.id));
+  const [showQuickEdit, setShowQuickEdit] = useState(false);
+  const [quickEditPrayers, setQuickEditPrayers] = useState(() => getPrayerTimes(defaultMosque.id));
+
+  // Sync prayers whenever activeMosque changes
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(`prayer_times_${activeMosque.id}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setPrayers(parsed);
+          return;
+        }
+      }
+    } catch {}
+
+    // Initial fallback
+    setPrayers(getPrayerTimes(activeMosque.id));
+
+    // Fetch live from Supabase API in background
+    fetch(`/api/prayer-times?mosqueId=${activeMosque.id}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.success && Array.isArray(data.prayers) && data.prayers.length > 0) {
+          setPrayers(data.prayers);
+        }
+      })
+      .catch(() => {});
   }, [activeMosque.id]);
+
+  const handleOpenQuickEdit = () => {
+    setQuickEditPrayers(JSON.parse(JSON.stringify(prayers)));
+    setShowQuickEdit(true);
+  };
+
+  const handleQuickSave = async (updated: typeof prayers) => {
+    setPrayers(updated);
+    setShowQuickEdit(false);
+    setSavedFeedback("✓ Prayer timings updated & published live!");
+    setTimeout(() => setSavedFeedback(null), 3500);
+
+    // Save to local storage for immediate persistence
+    try {
+      localStorage.setItem(`prayer_times_${activeMosque.id}`, JSON.stringify(updated));
+    } catch {}
+
+    // Save to Supabase cloud database
+    try {
+      await fetch("/api/prayer-times", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mosqueId: activeMosque.id, prayers: updated }),
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const jummahSessions = useMemo(() => {
     return getJummahSessions(activeMosque.id);
@@ -500,29 +560,42 @@ export default function HomepagePrayerBoard({
               <span>Today&apos;s 5 Daily Prayer Timings</span>
             </div>
 
-            {/* Filter Toggle: [ Adhan & Iqamah | Adhan Only ] */}
-            <div className="inline-flex p-1 rounded-xl bg-muted/60 border border-border text-xs font-semibold self-start sm:self-auto">
+            {/* Filter Toggle + Quick Update Timings */}
+            <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+              <div className="inline-flex p-1 rounded-xl bg-muted/60 border border-border text-xs font-semibold">
+                <button
+                  type="button"
+                  onClick={() => setFilterMode("both")}
+                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                    filterMode === "both"
+                      ? "bg-primary text-primary-foreground shadow-xs font-bold"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Adhan &amp; Iqamah
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterMode("adhan")}
+                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                    filterMode === "adhan"
+                      ? "bg-primary text-primary-foreground shadow-xs font-bold"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Adhan Only
+                </button>
+              </div>
+
+              {/* ⚡ Quick Update Timings Button */}
               <button
                 type="button"
-                onClick={() => setFilterMode("both")}
-                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                  filterMode === "both"
-                    ? "bg-primary text-primary-foreground shadow-xs font-bold"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
+                onClick={handleOpenQuickEdit}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
+                title="Quickly change prayer timings in 3 seconds"
               >
-                Adhan &amp; Iqamah
-              </button>
-              <button
-                type="button"
-                onClick={() => setFilterMode("adhan")}
-                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                  filterMode === "adhan"
-                    ? "bg-primary text-primary-foreground shadow-xs font-bold"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Adhan Only
+                <Zap className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+                <span>Quick Update</span>
               </button>
             </div>
           </div>
@@ -729,6 +802,144 @@ export default function HomepagePrayerBoard({
           <span>{isInstalled ? "App Installed" : "Download App"}</span>
         </button>
       </div>
+
+      {/* ── ⚡ QUICK UPDATE PRAYER TIMINGS MODAL (3-SECOND MOBILE EDIT) ── */}
+      {showQuickEdit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="relative w-full max-w-lg rounded-3xl bg-card border border-border p-5 sm:p-6 shadow-2xl text-foreground space-y-4 max-h-[92vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-border">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-amber-500/15 text-amber-500 flex items-center justify-center">
+                  <Zap className="w-5 h-5 fill-amber-500" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base sm:text-lg text-foreground">
+                    Quick Update Timings
+                  </h3>
+                  <p className="text-xs text-muted-foreground truncate max-w-[240px] sm:max-w-xs">
+                    {activeMosque.name}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowQuickEdit(false)}
+                className="p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* List of 5 Prayers with Quick [-5m] [+5m] Steppers */}
+            <div className="space-y-2.5">
+              {quickEditPrayers.map((p, idx) => (
+                <div
+                  key={p.name}
+                  className="p-3 rounded-2xl bg-muted/40 border border-border/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
+                >
+                  <div className="flex items-center justify-between sm:w-28">
+                    <span className="font-black text-sm uppercase tracking-wider text-foreground">
+                      {p.name}
+                    </span>
+                    <span className="text-[11px] font-mono font-bold text-primary sm:hidden">
+                      Jamaat: {formatTime(p.jamaatTime, "12h")}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 justify-between sm:justify-end flex-1">
+                    {/* Adhan quick time */}
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] uppercase font-bold text-muted-foreground">
+                        Adhan:
+                      </span>
+                      <input
+                        type="time"
+                        value={p.adhanTime || ""}
+                        onChange={(e) => {
+                          const updated = [...quickEditPrayers];
+                          updated[idx] = { ...updated[idx], adhanTime: e.target.value };
+                          setQuickEditPrayers(updated);
+                        }}
+                        className="px-1.5 py-1 rounded-lg border border-input bg-background font-mono text-xs w-20 text-center"
+                      />
+                    </div>
+
+                    {/* Jamaat with [-5m] [+5m] steppers */}
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] uppercase font-bold text-primary">
+                        Jamaat:
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = [...quickEditPrayers];
+                          updated[idx] = {
+                            ...updated[idx],
+                            jamaatTime: shiftTime(p.jamaatTime, -5),
+                          };
+                          setQuickEditPrayers(updated);
+                        }}
+                        className="w-7 h-7 rounded-lg bg-card border border-border hover:bg-muted text-xs font-bold flex items-center justify-center cursor-pointer active:scale-95 transition-all text-muted-foreground hover:text-foreground"
+                        title="Subtract 5 minutes"
+                      >
+                        -5
+                      </button>
+
+                      <input
+                        type="time"
+                        value={p.jamaatTime || ""}
+                        onChange={(e) => {
+                          const updated = [...quickEditPrayers];
+                          updated[idx] = { ...updated[idx], jamaatTime: e.target.value };
+                          setQuickEditPrayers(updated);
+                        }}
+                        className="px-1.5 py-1 rounded-lg border border-primary/40 bg-background font-mono text-xs font-bold text-primary w-20 text-center"
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = [...quickEditPrayers];
+                          updated[idx] = {
+                            ...updated[idx],
+                            jamaatTime: shiftTime(p.jamaatTime, 5),
+                          };
+                          setQuickEditPrayers(updated);
+                        }}
+                        className="w-7 h-7 rounded-lg bg-primary/10 border border-primary/30 hover:bg-primary/20 text-xs font-bold flex items-center justify-center cursor-pointer active:scale-95 transition-all text-primary"
+                        title="Add 5 minutes"
+                      >
+                        +5
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Quick Actions & Save Button */}
+            <div className="pt-2 flex items-center justify-between gap-3 border-t border-border">
+              <button
+                type="button"
+                onClick={() => setShowQuickEdit(false)}
+                className="py-2.5 px-4 rounded-xl border border-border hover:bg-muted text-xs font-semibold transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleQuickSave(quickEditPrayers)}
+                className="flex-1 py-2.5 px-4 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-xs sm:text-sm font-bold shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+              >
+                <Save className="w-4 h-4" />
+                <span>Save &amp; Publish Live</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
