@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import AdminHeader from "@/components/admin/admin-header";
 import { sampleMosques, sampleJummahSchedules } from "@/lib/sample-data";
-import { formatTime } from "@/lib/utils";
+import { formatTime, shiftTime } from "@/lib/utils";
 import type { JummahSession } from "@/types/mosque";
 import {
   CalendarDays,
@@ -16,11 +16,25 @@ import {
 } from "lucide-react";
 
 export default function JummahAdminPage() {
-  const [selectedMosqueId, setSelectedMosqueId] = useState<string>("m1");
+  const [selectedMosqueId, setSelectedMosqueId] = useState<string>("m_bilal");
   const [sessions, setSessions] = useState<Record<string, JummahSession[]>>(
     sampleJummahSchedules
   );
   const [isSaved, setIsSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Load saved Jummah sessions from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(`jummah_${selectedMosqueId}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setSessions((prev) => ({ ...prev, [selectedMosqueId]: parsed }));
+        }
+      }
+    } catch {}
+  }, [selectedMosqueId]);
 
   const currentMosque = sampleMosques.find((m) => m.id === selectedMosqueId);
   const currentSessions = sessions[selectedMosqueId] || [];
@@ -43,8 +57,8 @@ export default function JummahAdminPage() {
       id: `j_${Date.now()}`,
       mosqueId: selectedMosqueId,
       sessionNumber: nextSessionNumber,
-      khutbahTime: "13:30",
-      jamaatTime: "14:00",
+      khutbahTime: "12:45",
+      jamaatTime: "13:15",
       note: `Session ${nextSessionNumber}`,
       isEnabled: true,
     };
@@ -56,17 +70,35 @@ export default function JummahAdminPage() {
   };
 
   const handleDeleteSession = (idx: number) => {
-    if (window.confirm("Delete this Jummah session?")) {
-      setSessions((prev) => {
-        const next = [...(prev[selectedMosqueId] || [])];
-        next.splice(idx, 1);
-        return { ...prev, [selectedMosqueId]: next };
-      });
-    }
+    setSessions((prev) => {
+      const next = [...(prev[selectedMosqueId] || [])];
+      next.splice(idx, 1);
+      return { ...prev, [selectedMosqueId]: next };
+    });
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSaving(true);
+
+    try {
+      localStorage.setItem(`jummah_${selectedMosqueId}`, JSON.stringify(currentSessions));
+    } catch {}
+
+    try {
+      await fetch("/api/prayer-times", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mosqueId: selectedMosqueId,
+          jummah: currentSessions[0],
+        }),
+      });
+    } catch (err) {
+      console.error(err);
+    }
+
+    setIsSaving(false);
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 3000);
   };
@@ -171,29 +203,89 @@ export default function JummahAdminPage() {
                     <label className="block text-xs font-semibold text-muted-foreground mb-1">
                       Khutbah (Sermon) Time
                     </label>
-                    <input
-                      type="time"
-                      value={session.khutbahTime || ""}
-                      onChange={(e) =>
-                        handleSessionChange(idx, "khutbahTime", e.target.value)
-                      }
-                      className="w-full px-3 py-2 rounded-xl border border-input bg-background font-mono text-xs focus:outline-none focus:ring-2 focus:ring-primary/30"
-                    />
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleSessionChange(
+                            idx,
+                            "khutbahTime",
+                            shiftTime(session.khutbahTime, -5)
+                          )
+                        }
+                        className="w-7 h-7 rounded-lg bg-muted border border-border hover:bg-muted/80 text-xs font-bold flex items-center justify-center cursor-pointer active:scale-95 text-muted-foreground hover:text-foreground shrink-0"
+                        title="Subtract 5 minutes"
+                      >
+                        -5
+                      </button>
+                      <input
+                        type="time"
+                        value={session.khutbahTime || ""}
+                        onChange={(e) =>
+                          handleSessionChange(idx, "khutbahTime", e.target.value)
+                        }
+                        className="w-full px-2.5 py-2 rounded-xl border border-input bg-background font-mono text-xs focus:outline-none focus:ring-2 focus:ring-primary/30 text-center"
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleSessionChange(
+                            idx,
+                            "khutbahTime",
+                            shiftTime(session.khutbahTime, 5)
+                          )
+                        }
+                        className="w-7 h-7 rounded-lg bg-primary/10 border border-primary/30 hover:bg-primary/20 text-xs font-bold flex items-center justify-center cursor-pointer active:scale-95 text-primary shrink-0"
+                        title="Add 5 minutes"
+                      >
+                        +5
+                      </button>
+                    </div>
                   </div>
 
                   <div>
                     <label className="block text-xs font-semibold text-muted-foreground mb-1">
                       Jamaat / Iqamah Time *
                     </label>
-                    <input
-                      type="time"
-                      required
-                      value={session.jamaatTime || ""}
-                      onChange={(e) =>
-                        handleSessionChange(idx, "jamaatTime", e.target.value)
-                      }
-                      className="w-full px-3 py-2 rounded-xl border border-input bg-background font-mono text-xs font-bold text-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
-                    />
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleSessionChange(
+                            idx,
+                            "jamaatTime",
+                            shiftTime(session.jamaatTime, -5)
+                          )
+                        }
+                        className="w-7 h-7 rounded-lg bg-muted border border-border hover:bg-muted/80 text-xs font-bold flex items-center justify-center cursor-pointer active:scale-95 text-muted-foreground hover:text-foreground shrink-0"
+                        title="Subtract 5 minutes"
+                      >
+                        -5
+                      </button>
+                      <input
+                        type="time"
+                        required
+                        value={session.jamaatTime || ""}
+                        onChange={(e) =>
+                          handleSessionChange(idx, "jamaatTime", e.target.value)
+                        }
+                        className="w-full px-2.5 py-2 rounded-xl border border-primary/40 bg-background font-mono text-xs font-bold text-primary focus:outline-none focus:ring-2 focus:ring-primary/30 text-center"
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleSessionChange(
+                            idx,
+                            "jamaatTime",
+                            shiftTime(session.jamaatTime, 5)
+                          )
+                        }
+                        className="w-7 h-7 rounded-lg bg-primary/10 border border-primary/30 hover:bg-primary/20 text-xs font-bold flex items-center justify-center cursor-pointer active:scale-95 text-primary shrink-0"
+                        title="Add 5 minutes"
+                      >
+                        +5
+                      </button>
+                    </div>
                   </div>
 
                   <div>

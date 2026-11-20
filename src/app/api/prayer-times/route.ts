@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { samplePrayerTimes, sampleMosques } from "@/lib/sample-data";
+import { samplePrayerTimes, sampleMosques, sampleJummahSchedules } from "@/lib/sample-data";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -46,17 +46,17 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { mosqueId, prayers } = body;
+    const { mosqueId, prayers, jummah } = body;
 
-    if (!mosqueId || !Array.isArray(prayers)) {
+    if (!mosqueId) {
       return NextResponse.json(
-        { success: false, error: "Invalid payload. mosqueId and prayers array required." },
+        { success: false, error: "Invalid payload. mosqueId is required." },
         { status: 400 }
       );
     }
 
     const adminClient = createAdminClient();
-    if (adminClient) {
+    if (adminClient && Array.isArray(prayers)) {
       let targetId = mosqueId;
       if (mosqueId === "m_bilal" || mosqueId === "jamia-bilal-masjid") {
         targetId = "00000000-0000-0000-0000-000000000001";
@@ -84,13 +84,33 @@ export async function POST(request: NextRequest) {
     }
 
     // Also update in-memory sample data for instant cache
-    samplePrayerTimes[mosqueId] = prayers;
-    if (mosqueId === "m_bilal" || mosqueId === "00000000-0000-0000-0000-000000000001") {
-      samplePrayerTimes["m_bilal"] = prayers;
-      samplePrayerTimes["00000000-0000-0000-0000-000000000001"] = prayers;
+    if (Array.isArray(prayers) && prayers.length > 0) {
+      samplePrayerTimes[mosqueId] = prayers;
+      if (mosqueId === "m_bilal" || mosqueId === "00000000-0000-0000-0000-000000000001") {
+        samplePrayerTimes["m_bilal"] = prayers;
+        samplePrayerTimes["00000000-0000-0000-0000-000000000001"] = prayers;
+      }
     }
 
-    return NextResponse.json({ success: true, message: "Prayer times updated successfully" });
+    if (jummah && jummah.jamaatTime) {
+      const session = [
+        {
+          id: `j_${mosqueId}`,
+          mosqueId,
+          sessionNumber: 1,
+          khutbahTime: jummah.khutbahTime || "12:45",
+          jamaatTime: jummah.jamaatTime || "13:15",
+          isEnabled: true,
+        },
+      ];
+      sampleJummahSchedules[mosqueId] = session;
+      if (mosqueId === "m_bilal" || mosqueId === "00000000-0000-0000-0000-000000000001") {
+        sampleJummahSchedules["m_bilal"] = session;
+        sampleJummahSchedules["00000000-0000-0000-0000-000000000001"] = session;
+      }
+    }
+
+    return NextResponse.json({ success: true, message: "Timetable updated successfully" });
   } catch (error: any) {
     console.error("API error updating prayer times:", error);
     return NextResponse.json(

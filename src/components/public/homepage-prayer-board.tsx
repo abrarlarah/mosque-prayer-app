@@ -184,26 +184,60 @@ export default function HomepagePrayerBoard({
 
   const isUserDefault = isMounted && selectedMosqueId === userDefaultMosqueId;
 
-  // Prayer times state with local storage & API database synchronization
-  const [prayers, setPrayers] = useState(() => getPrayerTimes(defaultMosque.id));
-  const [showQuickEdit, setShowQuickEdit] = useState(false);
-  const [quickEditPrayers, setQuickEditPrayers] = useState(() => getPrayerTimes(defaultMosque.id));
+  // Admin authentication check: Only logged-in mosque administrators can see edit controls
+  const [isAdmin, setIsAdmin] = useState(false);
 
-  // Sync prayers whenever activeMosque changes
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(`prayer_times_${activeMosque.id}`);
-      if (saved) {
-        const parsed = JSON.parse(saved);
+      const loggedIn = localStorage.getItem("salah_auth_logged_in") === "true";
+      setIsAdmin(loggedIn);
+    } catch {}
+  }, []);
+
+  // Prayer times state with local storage & API database synchronization
+  const [prayers, setPrayers] = useState(() => getPrayerTimes(defaultMosque.id));
+  const [jummahSessions, setJummahSessions] = useState(() => getJummahSessions(defaultMosque.id));
+  const [showQuickEdit, setShowQuickEdit] = useState(false);
+  const [quickEditPrayers, setQuickEditPrayers] = useState(() => getPrayerTimes(defaultMosque.id));
+  const [quickEditJummah, setQuickEditJummah] = useState({
+    khutbahTime: "12:45",
+    jamaatTime: "13:15",
+  });
+
+  // Sync prayers & Jummah whenever activeMosque changes
+  useEffect(() => {
+    try {
+      const savedPrayers = localStorage.getItem(`prayer_times_${activeMosque.id}`);
+      if (savedPrayers) {
+        const parsed = JSON.parse(savedPrayers);
         if (Array.isArray(parsed) && parsed.length > 0) {
           setPrayers(parsed);
-          return;
+        }
+      } else {
+        setPrayers(getPrayerTimes(activeMosque.id));
+      }
+
+      const savedJummah = localStorage.getItem(`jummah_${activeMosque.id}`);
+      if (savedJummah) {
+        const parsed = JSON.parse(savedJummah);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setJummahSessions(parsed);
+          setQuickEditJummah({
+            khutbahTime: parsed[0].khutbahTime || "12:45",
+            jamaatTime: parsed[0].jamaatTime || "13:15",
+          });
+        }
+      } else {
+        const defJummah = getJummahSessions(activeMosque.id);
+        setJummahSessions(defJummah);
+        if (defJummah.length > 0) {
+          setQuickEditJummah({
+            khutbahTime: defJummah[0].khutbahTime || "12:45",
+            jamaatTime: defJummah[0].jamaatTime || "13:15",
+          });
         }
       }
     } catch {}
-
-    // Initial fallback
-    setPrayers(getPrayerTimes(activeMosque.id));
 
     // Fetch live from Supabase API in background
     fetch(`/api/prayer-times?mosqueId=${activeMosque.id}`)
@@ -218,13 +252,36 @@ export default function HomepagePrayerBoard({
 
   const handleOpenQuickEdit = () => {
     setQuickEditPrayers(JSON.parse(JSON.stringify(prayers)));
+    if (jummahSessions.length > 0) {
+      setQuickEditJummah({
+        khutbahTime: jummahSessions[0].khutbahTime || "12:45",
+        jamaatTime: jummahSessions[0].jamaatTime || "13:15",
+      });
+    }
     setShowQuickEdit(true);
   };
 
-  const handleQuickSave = async (updated: typeof prayers) => {
+  const handleQuickSave = async (updated: typeof prayers, updatedJummah?: typeof quickEditJummah) => {
     setPrayers(updated);
+    if (updatedJummah) {
+      const session = [
+        {
+          id: `j_${activeMosque.id}`,
+          mosqueId: activeMosque.id,
+          sessionNumber: 1,
+          khutbahTime: updatedJummah.khutbahTime,
+          jamaatTime: updatedJummah.jamaatTime,
+          isEnabled: true,
+        },
+      ];
+      setJummahSessions(session);
+      try {
+        localStorage.setItem(`jummah_${activeMosque.id}`, JSON.stringify(session));
+      } catch {}
+    }
+
     setShowQuickEdit(false);
-    setSavedFeedback("✓ Prayer timings updated & published live!");
+    setSavedFeedback("✓ Timings & Friday Jummah updated & published live!");
     setTimeout(() => setSavedFeedback(null), 3500);
 
     // Save to local storage for immediate persistence
@@ -237,16 +294,16 @@ export default function HomepagePrayerBoard({
       await fetch("/api/prayer-times", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mosqueId: activeMosque.id, prayers: updated }),
+        body: JSON.stringify({
+          mosqueId: activeMosque.id,
+          prayers: updated,
+          jummah: updatedJummah,
+        }),
       });
     } catch (err) {
       console.error(err);
     }
   };
-
-  const jummahSessions = useMemo(() => {
-    return getJummahSessions(activeMosque.id);
-  }, [activeMosque.id]);
 
   const currentDate = getCurrentDate(activeMosque.timezone);
   const hijriDate = getHijriDate(activeMosque.timezone);
@@ -587,16 +644,18 @@ export default function HomepagePrayerBoard({
                 </button>
               </div>
 
-              {/* ⚡ Quick Update Timings Button */}
-              <button
-                type="button"
-                onClick={handleOpenQuickEdit}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
-                title="Quickly change prayer timings in 3 seconds"
-              >
-                <Zap className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
-                <span>Quick Update</span>
-              </button>
+              {/* ⚡ Quick Update Timings Button (Visible ONLY to Logged-in Mosque Admins) */}
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={handleOpenQuickEdit}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
+                  title="Admin Quick Update Timings"
+                >
+                  <Zap className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+                  <span>Admin Edit</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -916,6 +975,87 @@ export default function HomepagePrayerBoard({
                   </div>
                 </div>
               ))}
+
+              {/* Friday Jummah Session */}
+              <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <div className="flex items-center justify-between sm:w-28">
+                  <div className="flex items-center gap-1.5">
+                    <Building2 className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                    <span className="font-black text-sm uppercase tracking-wider text-amber-900 dark:text-amber-200">
+                      Jummah
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-500/20 px-1.5 py-0.5 rounded">
+                    FRI
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2 justify-between sm:justify-end flex-1">
+                  {/* Khutbah */}
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] uppercase font-bold text-muted-foreground">
+                      Khutbah:
+                    </span>
+                    <input
+                      type="time"
+                      value={quickEditJummah.khutbahTime || "12:45"}
+                      onChange={(e) =>
+                        setQuickEditJummah({
+                          ...quickEditJummah,
+                          khutbahTime: e.target.value,
+                        })
+                      }
+                      className="px-1.5 py-1 rounded-lg border border-input bg-background font-mono text-xs w-20 text-center"
+                    />
+                  </div>
+
+                  {/* Jamaat with [-5m] [+5m] */}
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] uppercase font-bold text-primary">
+                      Jamaat:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setQuickEditJummah({
+                          ...quickEditJummah,
+                          jamaatTime: shiftTime(quickEditJummah.jamaatTime, -5),
+                        })
+                      }
+                      className="w-7 h-7 rounded-lg bg-card border border-border hover:bg-muted text-xs font-bold flex items-center justify-center cursor-pointer active:scale-95 text-muted-foreground hover:text-foreground"
+                      title="Subtract 5 minutes"
+                    >
+                      -5
+                    </button>
+
+                    <input
+                      type="time"
+                      value={quickEditJummah.jamaatTime || "13:15"}
+                      onChange={(e) =>
+                        setQuickEditJummah({
+                          ...quickEditJummah,
+                          jamaatTime: e.target.value,
+                        })
+                      }
+                      className="px-1.5 py-1 rounded-lg border border-primary/40 bg-background font-mono text-xs font-bold text-primary w-20 text-center"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setQuickEditJummah({
+                          ...quickEditJummah,
+                          jamaatTime: shiftTime(quickEditJummah.jamaatTime, 5),
+                        })
+                      }
+                      className="w-7 h-7 rounded-lg bg-primary/10 border border-primary/30 hover:bg-primary/20 text-xs font-bold flex items-center justify-center cursor-pointer active:scale-95 text-primary"
+                      title="Add 5 minutes"
+                    >
+                      +5
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Quick Actions & Save Button */}
@@ -930,7 +1070,7 @@ export default function HomepagePrayerBoard({
 
               <button
                 type="button"
-                onClick={() => handleQuickSave(quickEditPrayers)}
+                onClick={() => handleQuickSave(quickEditPrayers, quickEditJummah)}
                 className="flex-1 py-2.5 px-4 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-xs sm:text-sm font-bold shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
               >
                 <Save className="w-4 h-4" />
