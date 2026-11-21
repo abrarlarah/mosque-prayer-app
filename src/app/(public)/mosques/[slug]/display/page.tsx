@@ -38,10 +38,35 @@ export default function DisplayPage({ params }: DisplayPageProps) {
     notFound();
   }
 
-  const prayers = getPrayerTimes(mosque.id);
-  const jummahSessions = getJummahSessions(mosque.id);
+  const [prayers, setPrayers] = useState(() => getPrayerTimes(mosque.id));
+  const [jummahSessions, setJummahSessions] = useState(() => getJummahSessions(mosque.id));
   const announcements = getMosqueAnnouncements(mosque.id);
   const settings = getSettings(mosque.id);
+
+  // Sync latest prayer times and Jummah live from server
+  useEffect(() => {
+    const fetchLive = async () => {
+      try {
+        const res = await fetch(`/api/prayer-times?mosqueId=${mosque.id}&_t=${Date.now()}`, {
+          cache: "no-store",
+          headers: { "Cache-Control": "no-cache", Pragma: "no-cache" },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data?.success) {
+          if (Array.isArray(data.prayers) && data.prayers.length > 0) {
+            setPrayers(data.prayers);
+          }
+          if (Array.isArray(data.jummah) && data.jummah.length > 0) {
+            setJummahSessions(data.jummah);
+          }
+        }
+      } catch {}
+    };
+    fetchLive();
+    const interval = setInterval(fetchLive, 30_000);
+    return () => clearInterval(interval);
+  }, [mosque.id]);
 
   // Live state
   const [currentTimeStr, setCurrentTimeStr] = useState<string>("");

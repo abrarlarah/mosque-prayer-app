@@ -8,6 +8,7 @@ import type { PrayerTime, JummahSession } from "@/types/mosque";
 interface PrayerTimesTableProps {
   prayers: PrayerTime[];
   jummahSessions?: JummahSession[];
+  mosqueId?: string;
   timezone: string;
   showAdhan?: boolean;
   timeFormat?: "12h" | "24h";
@@ -35,11 +36,48 @@ function getPrayerIcon(name: string) {
 export default function PrayerTimesTable({
   prayers,
   jummahSessions = [],
+  mosqueId,
   timezone,
   showAdhan = true,
   timeFormat = "12h",
   className,
 }: PrayerTimesTableProps) {
+  const [currentPrayers, setCurrentPrayers] = useState(prayers);
+  const [currentJummah, setCurrentJummah] = useState(jummahSessions);
+
+  useEffect(() => {
+    setCurrentPrayers(prayers);
+  }, [prayers]);
+
+  useEffect(() => {
+    setCurrentJummah(jummahSessions);
+  }, [jummahSessions]);
+
+  useEffect(() => {
+    if (!mosqueId) return;
+    const fetchLive = async () => {
+      try {
+        const res = await fetch(`/api/prayer-times?mosqueId=${mosqueId}&_t=${Date.now()}`, {
+          cache: "no-store",
+          headers: { "Cache-Control": "no-cache", Pragma: "no-cache" },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data?.success) {
+          if (Array.isArray(data.prayers) && data.prayers.length > 0) {
+            setCurrentPrayers(data.prayers);
+          }
+          if (Array.isArray(data.jummah) && data.jummah.length > 0) {
+            setCurrentJummah(data.jummah);
+          }
+        }
+      } catch {}
+    };
+    fetchLive();
+    const interval = setInterval(fetchLive, 30_000);
+    return () => clearInterval(interval);
+  }, [mosqueId]);
+
   const [nextPrayer, setNextPrayer] = useState<{
     name: string;
     time: string;
@@ -48,8 +86,8 @@ export default function PrayerTimesTable({
 
   useEffect(() => {
     const updateNextPrayer = () => {
-      if (prayers && prayers.length > 0) {
-        setNextPrayer(getNextPrayer(prayers, timezone));
+      if (currentPrayers && currentPrayers.length > 0) {
+        setNextPrayer(getNextPrayer(currentPrayers, timezone));
       } else {
         setNextPrayer(null);
       }
@@ -59,9 +97,9 @@ export default function PrayerTimesTable({
     const interval = setInterval(updateNextPrayer, 60_000);
 
     return () => clearInterval(interval);
-  }, [prayers, timezone]);
+  }, [currentPrayers, timezone]);
 
-  if (!prayers || prayers.length === 0) {
+  if (!currentPrayers || currentPrayers.length === 0) {
     return (
       <div
         className={cn(
@@ -99,7 +137,7 @@ export default function PrayerTimesTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-border/60">
-            {prayers.map((prayer) => {
+            {currentPrayers.map((prayer) => {
               const isEnabled = prayer.isEnabled;
               const isNext = Boolean(
                 isEnabled &&
@@ -201,7 +239,7 @@ export default function PrayerTimesTable({
             })}
 
             {/* Friday Jummah Session Row */}
-            {jummahSessions && jummahSessions.length > 0 && (
+            {currentJummah && currentJummah.length > 0 && (
               <tr className="border-l-4 border-l-amber-500 bg-amber-500/5 hover:bg-amber-500/10 transition-colors">
                 <td className="px-4 py-3.5 sm:px-6 sm:py-4">
                   <div className="flex items-center gap-3">
@@ -225,14 +263,14 @@ export default function PrayerTimesTable({
                 {showAdhan && (
                   <td className="whitespace-nowrap px-4 py-3.5 text-right tabular-nums sm:px-6 sm:py-4">
                     <span className="text-muted-foreground font-mono text-xs">
-                      Khutbah: <strong className="text-foreground">{formatTime(jummahSessions[0].khutbahTime, timeFormat)}</strong>
+                      Khutbah: <strong className="text-foreground">{formatTime(currentJummah[0].khutbahTime, timeFormat)}</strong>
                     </span>
                   </td>
                 )}
 
                 <td className="whitespace-nowrap px-4 py-3.5 text-right tabular-nums sm:px-6 sm:py-4">
                   <span className="font-mono font-bold text-primary text-base">
-                    {formatTime(jummahSessions[0].jamaatTime, timeFormat)}
+                    {formatTime(currentJummah[0].jamaatTime, timeFormat)}
                   </span>
                 </td>
               </tr>

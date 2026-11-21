@@ -52,7 +52,7 @@ export default function MosquePrayerEditorPage({ params }: PageProps) {
   const [isSaved, setIsSaved] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  // Load saved custom timings if any
+  // Load saved custom timings from local storage and sync live from database
   useEffect(() => {
     try {
       const saved = localStorage.getItem(`prayer_times_${mosque.id}`);
@@ -75,6 +75,33 @@ export default function MosquePrayerEditorPage({ params }: PageProps) {
         }
       }
     } catch {}
+
+    // Also fetch live authoritative timings from Supabase
+    fetch(`/api/prayer-times?mosqueId=${mosque.id}&_t=${Date.now()}`, {
+      cache: "no-store",
+      headers: { "Cache-Control": "no-cache", Pragma: "no-cache" },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.success) {
+          if (Array.isArray(data.prayers) && data.prayers.length > 0) {
+            setPrayers(data.prayers);
+            try {
+              localStorage.setItem(`prayer_times_${mosque.id}`, JSON.stringify(data.prayers));
+            } catch {}
+          }
+          if (Array.isArray(data.jummah) && data.jummah.length > 0) {
+            setJummah({
+              khutbahTime: data.jummah[0].khutbahTime || "12:45",
+              jamaatTime: data.jummah[0].jamaatTime || "13:15",
+            });
+            try {
+              localStorage.setItem(`jummah_${mosque.id}`, JSON.stringify(data.jummah));
+            } catch {}
+          }
+        }
+      })
+      .catch(() => {});
   }, [mosque.id]);
 
   const handleTimeChange = (

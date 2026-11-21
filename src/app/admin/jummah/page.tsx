@@ -23,7 +23,7 @@ export default function JummahAdminPage() {
   const [isSaved, setIsSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Load saved Jummah sessions from localStorage
+  // Load saved Jummah sessions from localStorage & live database
   useEffect(() => {
     try {
       const saved = localStorage.getItem(`jummah_${selectedMosqueId}`);
@@ -34,6 +34,21 @@ export default function JummahAdminPage() {
         }
       }
     } catch {}
+
+    fetch(`/api/prayer-times?mosqueId=${selectedMosqueId}&_t=${Date.now()}`, {
+      cache: "no-store",
+      headers: { "Cache-Control": "no-cache", Pragma: "no-cache" },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.success && Array.isArray(data.jummah) && data.jummah.length > 0) {
+          setSessions((prev) => ({ ...prev, [selectedMosqueId]: data.jummah }));
+          try {
+            localStorage.setItem(`jummah_${selectedMosqueId}`, JSON.stringify(data.jummah));
+          } catch {}
+        }
+      })
+      .catch(() => {});
   }, [selectedMosqueId]);
 
   const currentMosque = sampleMosques.find((m) => m.id === selectedMosqueId);

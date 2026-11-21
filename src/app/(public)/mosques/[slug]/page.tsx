@@ -156,6 +156,7 @@ export default async function MosqueDetailPage({ params }: MosquePageProps) {
             <PrayerTimesTable
               prayers={prayers}
               jummahSessions={jummahSessions}
+              mosqueId={mosque.id}
               timezone={mosque.timezone}
               showAdhan={settings.showAdhanTimes}
               timeFormat={settings.timeFormat}

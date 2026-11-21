@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
 import {
   MapPin,
@@ -26,6 +26,7 @@ import {
   Zap,
   X,
   Save,
+  RefreshCw,
 } from "lucide-react";
 import type { Mosque } from "@/types/mosque";
 import {
@@ -203,9 +204,52 @@ export default function HomepagePrayerBoard({
     khutbahTime: "12:45",
     jamaatTime: "13:15",
   });
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Sync prayers & Jummah whenever activeMosque changes
+  // Synchronize live timings and Jummah from cloud API (bypassing any browser cache)
+  const fetchLiveTimings = useCallback(async (mosqueId: string, forceClearCache = false) => {
+    if (forceClearCache) {
+      try {
+        localStorage.removeItem(`prayer_times_${mosqueId}`);
+        localStorage.removeItem(`jummah_${mosqueId}`);
+      } catch {}
+    }
+    try {
+      const res = await fetch(`/api/prayer-times?mosqueId=${mosqueId}&_t=${Date.now()}`, {
+        cache: "no-store",
+        headers: {
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          Pragma: "no-cache",
+        },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data?.success) {
+        if (Array.isArray(data.prayers) && data.prayers.length > 0) {
+          setPrayers(data.prayers);
+          try {
+            localStorage.setItem(`prayer_times_${mosqueId}`, JSON.stringify(data.prayers));
+          } catch {}
+        }
+        if (Array.isArray(data.jummah) && data.jummah.length > 0) {
+          setJummahSessions(data.jummah);
+          setQuickEditJummah({
+            khutbahTime: data.jummah[0].khutbahTime || "12:45",
+            jamaatTime: data.jummah[0].jamaatTime || "13:15",
+          });
+          try {
+            localStorage.setItem(`jummah_${mosqueId}`, JSON.stringify(data.jummah));
+          } catch {}
+        }
+      }
+    } catch (err) {
+      console.error("Live sync failed:", err);
+    }
+  }, []);
+
+  // Sync prayers & Jummah whenever activeMosque changes, on interval, and when app gains focus
   useEffect(() => {
+    // 1. Initial immediate paint from localStorage or default sample fallback
     try {
       const savedPrayers = localStorage.getItem(`prayer_times_${activeMosque.id}`);
       if (savedPrayers) {
@@ -239,16 +283,42 @@ export default function HomepagePrayerBoard({
       }
     } catch {}
 
-    // Fetch live from Supabase API in background
-    fetch(`/api/prayer-times?mosqueId=${activeMosque.id}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data?.success && Array.isArray(data.prayers) && data.prayers.length > 0) {
-          setPrayers(data.prayers);
-        }
-      })
-      .catch(() => {});
-  }, [activeMosque.id]);
+    // 2. Fetch live from database immediately
+    fetchLiveTimings(activeMosque.id);
+
+    // 3. Periodic poll every 30 seconds for background updates
+    const pollInterval = setInterval(() => {
+      fetchLiveTimings(activeMosque.id);
+    }, 30_000);
+
+    // 4. Instant revalidation on mobile screen unlock or tab focus
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchLiveTimings(activeMosque.id);
+      }
+    };
+    const handleWindowFocus = () => {
+      fetchLiveTimings(activeMosque.id);
+    };
+
+    window.addEventListener("focus", handleWindowFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      clearInterval(pollInterval);
+      window.removeEventListener("focus", handleWindowFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [activeMosque.id, fetchLiveTimings]);
+
+  // Manual one-tap Refresh / Cache Clear
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchLiveTimings(activeMosque.id, true);
+    setIsRefreshing(false);
+    setSavedFeedback("✓ Timings & Friday Jummah synchronized live with server!");
+    setTimeout(() => setSavedFeedback(null), 3000);
+  };
 
   const handleOpenQuickEdit = () => {
     setQuickEditPrayers(JSON.parse(JSON.stringify(prayers)));
@@ -643,6 +713,18 @@ export default function HomepagePrayerBoard({
                   Adhan Only
                 </button>
               </div>
+
+              {/* 🔄 Live Sync / Cache Clear Button */}
+              <button
+                type="button"
+                onClick={handleManualRefresh}
+                disabled={isRefreshing}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border bg-background hover:bg-muted text-xs font-semibold text-muted-foreground hover:text-foreground transition-all cursor-pointer shadow-2xs active:scale-95 disabled:opacity-60"
+                title="Tap to sync latest timings & Jummah from server and clear cache"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 text-primary ${isRefreshing ? "animate-spin" : ""}`} />
+                <span className="hidden sm:inline">Sync Live</span>
+              </button>
 
               {/* ⚡ Quick Update Timings Button (Visible ONLY to Logged-in Mosque Admins) */}
               {isAdmin && (
