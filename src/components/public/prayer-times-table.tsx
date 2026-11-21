@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Sunrise, Sun, Sunset, Moon, Star, Clock } from "lucide-react";
+import { Sunrise, Sun, Sunset, Moon, Star, Clock, Building2 } from "lucide-react";
 import { cn, formatTime, getNextPrayer } from "@/lib/utils";
-import type { PrayerTime } from "@/types/mosque";
+import type { PrayerTime, JummahSession } from "@/types/mosque";
 
 interface PrayerTimesTableProps {
   prayers: PrayerTime[];
+  jummahSessions?: JummahSession[];
   timezone: string;
   showAdhan?: boolean;
   timeFormat?: "12h" | "24h";
@@ -33,6 +34,7 @@ function getPrayerIcon(name: string) {
 
 export default function PrayerTimesTable({
   prayers,
+  jummahSessions = [],
   timezone,
   showAdhan = true,
   timeFormat = "12h",
@@ -197,6 +199,44 @@ export default function PrayerTimesTable({
                 </tr>
               );
             })}
+
+            {/* Friday Jummah Session Row */}
+            {jummahSessions && jummahSessions.length > 0 && (
+              <tr className="border-l-4 border-l-amber-500 bg-amber-500/5 hover:bg-amber-500/10 transition-colors">
+                <td className="px-4 py-3.5 sm:px-6 sm:py-4">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-500/20 text-amber-600 dark:text-amber-400">
+                      <Building2 className="h-4 w-4" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-foreground">JUMMAH</span>
+                        <span className="inline-flex items-center rounded-full bg-amber-500/20 text-amber-800 dark:text-amber-200 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider">
+                          Friday
+                        </span>
+                      </div>
+                      <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                        Weekly Congregational Prayer
+                      </p>
+                    </div>
+                  </div>
+                </td>
+
+                {showAdhan && (
+                  <td className="whitespace-nowrap px-4 py-3.5 text-right tabular-nums sm:px-6 sm:py-4">
+                    <span className="text-muted-foreground font-mono text-xs">
+                      Khutbah: <strong className="text-foreground">{formatTime(jummahSessions[0].khutbahTime, timeFormat)}</strong>
+                    </span>
+                  </td>
+                )}
+
+                <td className="whitespace-nowrap px-4 py-3.5 text-right tabular-nums sm:px-6 sm:py-4">
+                  <span className="font-mono font-bold text-primary text-base">
+                    {formatTime(jummahSessions[0].jamaatTime, timeFormat)}
+                  </span>
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

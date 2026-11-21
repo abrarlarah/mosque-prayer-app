@@ -1,8 +1,9 @@
 import React from "react";
 import Link from "next/link";
-import { MapPin, Clock, Tv, Star, ArrowRight } from "lucide-react";
+import { MapPin, Clock, Tv, Star, ArrowRight, Building2 } from "lucide-react";
 import type { Mosque, PrayerTime } from "@/types/mosque";
 import { cn, formatTime, getNextPrayer } from "@/lib/utils";
+import { getJummahSessions } from "@/lib/sample-data";
 
 export interface MosqueCardProps {
   mosque: Mosque;
@@ -15,6 +16,8 @@ export default function MosqueCard({
   prayerTimes = [],
   className,
 }: MosqueCardProps) {
+  const jummahSessions = getJummahSessions(mosque.id);
+
   const nextPrayer =
     prayerTimes.length > 0
       ? getNextPrayer(prayerTimes, mosque.timezone)
@@ -120,6 +123,25 @@ export default function MosqueCard({
                   </div>
                 );
               })}
+
+              {/* Friday Jummah Row */}
+              {jummahSessions.length > 0 && (
+                <div className="grid grid-cols-3 px-3 py-1.5 items-center bg-amber-500/5 hover:bg-amber-500/10 text-foreground transition-colors font-medium">
+                  <span className="font-bold flex items-center gap-1 text-amber-700 dark:text-amber-400">
+                    <Building2 className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                    <span>Jummah</span>
+                    <span className="text-[9px] bg-amber-500/20 text-amber-800 dark:text-amber-200 px-1 py-0.2 rounded font-extrabold">
+                      FRI
+                    </span>
+                  </span>
+                  <span className="text-center font-mono text-muted-foreground text-[11px]">
+                    {formatTime(jummahSessions[0].khutbahTime, "12h")}
+                  </span>
+                  <span className="text-right font-mono font-bold text-primary">
+                    {formatTime(jummahSessions[0].jamaatTime, "12h")}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         )}

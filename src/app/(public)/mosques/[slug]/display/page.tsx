@@ -170,8 +170,8 @@ export default function DisplayPage({ params }: DisplayPageProps) {
           </div>
         )}
 
-        {/* 5 Daily Prayers Horizontal Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 md:gap-6">
+        {/* 6 Prayer Cards: 5 Daily Prayers + Jummah in 6th Slot */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 md:gap-5">
           {prayers.map((prayer) => {
             const isTarget = nextPrayer?.name.toLowerCase() === prayer.name.toLowerCase();
 
@@ -221,6 +221,44 @@ export default function DisplayPage({ params }: DisplayPageProps) {
               </div>
             );
           })}
+
+          {/* Card 6: Friday Jummah Prayer */}
+          {jummahSessions.length > 0 && (
+            <div className="rounded-3xl p-6 transition-all border flex flex-col justify-between bg-emerald-950/50 border-amber-500/50 hover:bg-emerald-950/70 shadow-lg">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-2xl md:text-3xl font-extrabold tracking-tight text-amber-300">
+                    Jummah
+                  </h3>
+                  <span className="px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-black uppercase tracking-wider">
+                    FRI
+                  </span>
+                </div>
+
+                {settings.showAdhanTimes && (
+                  <div className="mb-4 pb-3 border-b border-emerald-800/40">
+                    <div className="text-xs uppercase tracking-wider text-emerald-400/80 flex items-center gap-1.5 mb-1 font-semibold">
+                      <Volume2 className="w-3.5 h-3.5" />
+                      <span>Khutbah</span>
+                    </div>
+                    <div className="text-xl md:text-2xl font-mono font-medium text-neutral-300">
+                      {formatTime(jummahSessions[0].khutbahTime, settings.timeFormat)}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <div className="text-xs uppercase tracking-wider text-emerald-400 flex items-center gap-1.5 mb-1 font-bold">
+                  <Users className="w-3.5 h-3.5" />
+                  <span>Jamaat</span>
+                </div>
+                <div className="text-3xl md:text-4xl font-mono font-extrabold text-white">
+                  {formatTime(jummahSessions[0].jamaatTime, settings.timeFormat)}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </main>
 

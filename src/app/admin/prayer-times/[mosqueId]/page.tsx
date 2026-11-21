@@ -4,7 +4,7 @@ import React, { use, useState, useEffect } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import AdminHeader from "@/components/admin/admin-header";
-import { sampleMosques, samplePrayerTimes } from "@/lib/sample-data";
+import { sampleMosques, samplePrayerTimes, sampleJummahSchedules } from "@/lib/sample-data";
 import { formatTime, shiftTime } from "@/lib/utils";
 import {
   ArrowLeft,
@@ -16,6 +16,7 @@ import {
   Calendar,
   Layers,
   Zap,
+  Building2,
 } from "lucide-react";
 
 interface PageProps {
@@ -39,6 +40,13 @@ export default function MosquePrayerEditorPage({ params }: PageProps) {
   ];
 
   const [prayers, setPrayers] = useState(initialPrayers);
+  const [jummah, setJummah] = useState(() => {
+    const defaultJ = sampleJummahSchedules[mosque.id]?.[0];
+    return {
+      khutbahTime: defaultJ?.khutbahTime || "12:45",
+      jamaatTime: defaultJ?.jamaatTime || "13:15",
+    };
+  });
   const [hasChanges, setHasChanges] = useState(false);
   const [previewMode, setPreviewMode] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
@@ -53,6 +61,17 @@ export default function MosquePrayerEditorPage({ params }: PageProps) {
         if (Array.isArray(parsed) && parsed.length > 0) {
           setPrayers(parsed);
           samplePrayerTimes[mosque.id] = parsed;
+        }
+      }
+
+      const savedJ = localStorage.getItem(`jummah_${mosque.id}`);
+      if (savedJ) {
+        const parsedJ = JSON.parse(savedJ);
+        if (Array.isArray(parsedJ) && parsedJ.length > 0) {
+          setJummah({
+            khutbahTime: parsedJ[0].khutbahTime || "12:45",
+            jamaatTime: parsedJ[0].jamaatTime || "13:15",
+          });
         }
       }
     } catch {}
@@ -113,12 +132,27 @@ export default function MosquePrayerEditorPage({ params }: PageProps) {
       localStorage.setItem(`prayer_times_${mosque.id}`, JSON.stringify(prayers));
     } catch {}
 
+    const session = [
+      {
+        id: `j_${mosque.id}`,
+        mosqueId: mosque.id,
+        sessionNumber: 1,
+        khutbahTime: jummah.khutbahTime,
+        jamaatTime: jummah.jamaatTime,
+        isEnabled: true,
+      },
+    ];
+    try {
+      localStorage.setItem(`jummah_${mosque.id}`, JSON.stringify(session));
+      sampleJummahSchedules[mosque.id] = session;
+    } catch {}
+
     // Save to Supabase cloud database
     try {
       await fetch("/api/prayer-times", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mosqueId: mosque.id, prayers }),
+        body: JSON.stringify({ mosqueId: mosque.id, prayers, jummah }),
       });
     } catch (err) {
       console.error(err);
@@ -326,6 +360,106 @@ export default function MosquePrayerEditorPage({ params }: PageProps) {
                     </td>
                   </tr>
                 ))}
+
+                {/* Friday Jummah Row */}
+                <tr className="hover:bg-amber-500/10 transition-colors bg-amber-500/5">
+                  <td className="py-4 px-4 font-bold text-foreground">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                      <span>Jummah</span>
+                      <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-500/20 px-1.5 py-0.5 rounded">
+                        Friday
+                      </span>
+                    </div>
+                  </td>
+
+                  <td className="py-4 px-4">
+                    <div className="inline-flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newTime = shiftTime(jummah.khutbahTime, -5);
+                          setJummah({ ...jummah, khutbahTime: newTime });
+                          setHasChanges(true);
+                        }}
+                        className="w-7 h-7 rounded-lg bg-muted border border-border hover:bg-muted/80 text-xs font-bold flex items-center justify-center cursor-pointer active:scale-95 transition-all text-muted-foreground hover:text-foreground"
+                        title="Subtract 5 minutes"
+                      >
+                        -5
+                      </button>
+                      <input
+                        type="time"
+                        value={jummah.khutbahTime || "12:45"}
+                        onChange={(e) => {
+                          setJummah({ ...jummah, khutbahTime: e.target.value });
+                          setHasChanges(true);
+                        }}
+                        className="px-2.5 py-2 rounded-xl border border-input bg-background font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 w-28 text-center"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newTime = shiftTime(jummah.khutbahTime, 5);
+                          setJummah({ ...jummah, khutbahTime: newTime });
+                          setHasChanges(true);
+                        }}
+                        className="w-7 h-7 rounded-lg bg-primary/10 border border-primary/30 hover:bg-primary/20 text-xs font-bold flex items-center justify-center cursor-pointer active:scale-95 transition-all text-primary"
+                        title="Add 5 minutes"
+                      >
+                        +5
+                      </button>
+                    </div>
+                  </td>
+
+                  <td className="py-4 px-4">
+                    <div className="inline-flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newTime = shiftTime(jummah.jamaatTime, -5);
+                          setJummah({ ...jummah, jamaatTime: newTime });
+                          setHasChanges(true);
+                        }}
+                        className="w-7 h-7 rounded-lg bg-muted border border-border hover:bg-muted/80 text-xs font-bold flex items-center justify-center cursor-pointer active:scale-95 transition-all text-muted-foreground hover:text-foreground"
+                        title="Subtract 5 minutes"
+                      >
+                        -5
+                      </button>
+                      <input
+                        type="time"
+                        required
+                        value={jummah.jamaatTime || "13:15"}
+                        onChange={(e) => {
+                          setJummah({ ...jummah, jamaatTime: e.target.value });
+                          setHasChanges(true);
+                        }}
+                        className="px-2.5 py-2 rounded-xl border border-primary/40 bg-background font-mono text-sm font-semibold text-primary focus:outline-none focus:ring-2 focus:ring-primary/30 w-28 text-center"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newTime = shiftTime(jummah.jamaatTime, 5);
+                          setJummah({ ...jummah, jamaatTime: newTime });
+                          setHasChanges(true);
+                        }}
+                        className="w-7 h-7 rounded-lg bg-primary/10 border border-primary/30 hover:bg-primary/20 text-xs font-bold flex items-center justify-center cursor-pointer active:scale-95 transition-all text-primary"
+                        title="Add 5 minutes"
+                      >
+                        +5
+                      </button>
+                    </div>
+                  </td>
+
+                  <td className="py-4 px-4">
+                    <span className="px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-400">
+                      Friday Weekly
+                    </span>
+                  </td>
+
+                  <td className="py-4 px-4 text-right font-mono text-xs text-muted-foreground">
+                    {formatTime(jummah.jamaatTime, "12h")}
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>
