@@ -103,7 +103,11 @@ export default function JummahAdminPage() {
     try {
       await fetch("/api/prayer-times", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer admin-session",
+        },
+        credentials: "include",
         body: JSON.stringify({
           mosqueId: selectedMosqueId,
           jummah: currentSessions[0],

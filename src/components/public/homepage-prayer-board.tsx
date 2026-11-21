@@ -363,7 +363,11 @@ export default function HomepagePrayerBoard({
     try {
       await fetch("/api/prayer-times", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer admin-session",
+        },
+        credentials: "include",
         body: JSON.stringify({
           mosqueId: activeMosque.id,
           prayers: updated,

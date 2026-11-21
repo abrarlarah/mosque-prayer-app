@@ -18,6 +18,7 @@ import {
   Shield,
   Menu,
   X,
+  ExternalLink,
 } from "lucide-react";
 import { APP_NAME } from "@/lib/constants";
 
@@ -34,6 +35,15 @@ export default function AdminSidebar({
 }: AdminSidebarProps) {
   const pathname = usePathname();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+  const handleSignOut = () => {
+    try {
+      localStorage.removeItem("salah_auth_logged_in");
+      localStorage.removeItem("salah_auth_role");
+      document.cookie = "salah_auth_logged_in=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    } catch {}
+    window.location.href = "/login";
+  };
 
   const navItems = [
     { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
@@ -112,8 +122,8 @@ export default function AdminSidebar({
       </div>
 
       {/* User Info & Logout */}
-      <div className="p-4 border-t border-primary-foreground/15">
-        <div className="px-3 py-2 mb-2">
+      <div className="p-4 border-t border-primary-foreground/15 space-y-1">
+        <div className="px-3 py-1.5 mb-1">
           <div className="text-sm font-semibold truncate">{userName}</div>
           <div className="text-xs text-primary-foreground/70 truncate">{userEmail}</div>
         </div>
@@ -122,9 +132,18 @@ export default function AdminSidebar({
           href="/"
           className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-xs font-medium text-primary-foreground/80 hover:bg-white/10 hover:text-white transition-colors"
         >
-          <LogOut className="w-4 h-4" />
-          <span>Exit to Public Site</span>
+          <ExternalLink className="w-4 h-4" />
+          <span>View Public Timetable</span>
         </Link>
+
+        <button
+          type="button"
+          onClick={handleSignOut}
+          className="w-full flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-rose-200 hover:bg-rose-500/20 hover:text-white transition-colors cursor-pointer"
+        >
+          <LogOut className="w-4 h-4" />
+          <span>Sign Out</span>
+        </button>
       </div>
     </div>
   );

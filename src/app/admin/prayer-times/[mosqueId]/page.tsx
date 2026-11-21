@@ -178,7 +178,11 @@ export default function MosquePrayerEditorPage({ params }: PageProps) {
     try {
       await fetch("/api/prayer-times", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer admin-session",
+        },
+        credentials: "include",
         body: JSON.stringify({ mosqueId: mosque.id, prayers, jummah }),
       });
     } catch (err) {

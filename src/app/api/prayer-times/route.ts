@@ -111,6 +111,23 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    // Security verification: Only authenticated mosque administrators can update timings
+    const authCookie = request.cookies.get("salah_auth_logged_in")?.value;
+    const authHeader = request.headers.get("authorization");
+    const isAuthorized =
+      authCookie === "true" ||
+      (authHeader && authHeader.startsWith("Bearer "));
+
+    if (!isAuthorized) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Unauthorized: Only authenticated mosque administrators can modify prayer timetables.",
+        },
+        { status: 401, headers: NO_CACHE_HEADERS }
+      );
+    }
+
     const body = await request.json();
     const { mosqueId, prayers, jummah } = body;
 

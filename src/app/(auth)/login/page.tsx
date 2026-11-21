@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Lock,
   Mail,
@@ -16,8 +16,11 @@ import {
 } from "lucide-react";
 import { APP_NAME } from "@/lib/constants";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectParam = searchParams.get("redirect");
+
   const [email, setEmail] = useState("admin.bilal@salahtimes.org");
   const [password, setPassword] = useState("password123");
   const [isLoading, setIsLoading] = useState(false);
@@ -27,18 +30,24 @@ export default function LoginPage() {
     setIsLoading(true);
     setSuccessMsg(`Signing in as ${roleTitle}...`);
 
+    const destination = redirectParam && redirectParam.startsWith("/admin") ? redirectParam : targetPath;
+
     setTimeout(() => {
       try {
         localStorage.setItem("salah_auth_logged_in", "true");
         localStorage.setItem("salah_auth_role", roleTitle);
+        document.cookie = "salah_auth_logged_in=true; path=/; max-age=604800; SameSite=Lax";
       } catch {}
-      router.push(targetPath);
+      router.push(destination);
     }, 500);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    performLogin("/admin", "Administrator");
+    const roleTitle = email.toLowerCase().includes("super")
+      ? "Super Administrator"
+      : "Jamia Bilal Mosque Admin";
+    performLogin("/admin", roleTitle);
   };
 
   return (
@@ -54,6 +63,13 @@ export default function LoginPage() {
           Manage prayer timetables, Jummah schedules, announcements, and mosque settings.
         </p>
       </div>
+
+      {redirectParam && (
+        <div className="mb-5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs flex items-center gap-2">
+          <ShieldCheck className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
+          <span>Please sign in to access the requested admin page.</span>
+        </div>
+      )}
 
       {successMsg && (
         <div className="mb-5 p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs sm:text-sm flex items-center gap-2.5">
@@ -184,5 +200,19 @@ export default function LoginPage() {
         </Link>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="w-full max-w-md bg-card border border-border rounded-3xl p-8 shadow-xl text-center text-sm text-muted-foreground">
+          Loading sign in...
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }
